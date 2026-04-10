@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sales Dashboard | ESC</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f7fa;
+      color: #333;
+      line-height: 1.6;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 20px 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .header h1 { font-size: 22px; font-weight: 600; }
+    .header .meta { font-size: 13px; opacity: 0.9; }
+
+    .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+
+    /* ===== KPI SECTION ===== */
+    .kpi-section {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+
+    .kpi-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+
+    .kpi-header h2 { font-size: 16px; font-weight: 600; }
+
+    .timeframe-pills {
+      display: flex;
+      gap: 8px;
+    }
+
+    .pill {
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      cursor: pointer;
+      border: 1px solid #ddd;
+      background: white;
+      transition: all 0.2s;
+    }
+
+    .pill:hover { background: #f0f0f0; }
+    .pill.active { background: #667eea; color: white; border-color: #667eea; }
+
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 15px;
+    }
+
+    .kpi-card {
+      padding: 15px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #f8f9fc 0%, #f0f2f8 100%);
+      border-left: 4px solid #667eea;
+    }
+
+    .kpi-card.green { border-left-color: #48bb78; }
+    .kpi-card.orange { border-left-color: #ed8936; }
+    .kpi-card.purple { border-left-color: #9f7aea; }
+    .kpi-card.red { border-left-color: #e53e3e; }
+    .kpi-card.blue { border-left-color: #4299e1; }
+
+    .kpi-card .label { font-size: 11px; color: #666; text-transform: uppercase; letter-spacing: 0.5px; }
+    .kpi-card .value { font-size: 28px; font-weight: 700; margin-top: 5px; }
+    .kpi-card .change { font-size: 11px; color: #48bb78; margin-top: 3px; }
+    .kpi-card .change.negative { color: #e53e3e; }
+
+    /* ===== CHART SECTION ===== */
+    .chart-section {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+
+    .chart-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 15px;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+
+    .chart-header h2 { font-size: 16px; font-weight: 600; }
+
+    .filter-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .filter-pill {
+      padding: 5px 12px;
+      border-radius: 15px;
+      font-size: 11px;
+      cursor: pointer;
+      border: 1px solid #e2e8f0;
+      background: white;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .filter-pill:hover { background: #f7fafc; }
+    .filter-pill.active { background: #667eea; color: white; border-color: #667eea; }
+    .filter-pill .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .chart-container {
+      height: 200px;
+      display: flex;
+      align-items: flex-end;
+      gap: 2px;
+      padding: 10px 0;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .chart-bar-group {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      cursor: pointer;
+      min-width: 0;
+    }
+
+    .chart-bar-group:hover { background: rgba(102, 126, 234, 0.05); border-radius: 4px; }
+    .chart-bar-group.selected { background: rgba(102, 126, 234, 0.15); border-radius: 4px; }
+
+    .chart-bar-stack {
+      width: 100%;
+      max-width: 30px;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      height: 160px;
+    }
+
+    .chart-bar {
+      width: 100%;
+      transition: all 0.2s;
+    }
+
+    .chart-bar:first-child { border-radius: 3px 3px 0 0; }
+
+    .chart-bar.new { background: #bee3f8; }
+    .chart-bar.quiz { background: #faf089; }
+    .chart-bar.masterclass { background: #d6bcfa; }
+    .chart-bar.booked { background: #ed8936; }
+    .chart-bar.purchased { background: #48bb78; }
+    .chart-bar.optout { background: #e53e3e; }
+
+    .chart-bar-date {
+      font-size: 9px;
+      color: #999;
+      margin-top: 6px;
+      white-space: nowrap;
+    }
+
+    .chart-legend {
+      display: flex;
+      gap: 15px;
+      margin-top: 15px;
+      flex-wrap: wrap;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: #666;
+    }
+
+    .legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 3px;
+    }
+
+    /* ===== DAY DETAIL ===== */
+    .day-detail {
+      background: #f8f9fa;
+      border-radius: 8px;
+      padding: 15px;
+      margin-top: 15px;
+      display: none;
+    }
+
+    .day-detail.visible { display: block; }
+
+    .day-detail-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .day-detail-header h3 { font-size: 14px; font-weight: 600; }
+
+    .day-contacts-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 10px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .day-contact-card {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .day-contact-card:hover { border-color: #667eea; }
+    .day-contact-card.selected { border-color: #667eea; background: #f0f4ff; }
+
+    .day-contact-card .name { font-weight: 600; font-size: 13px; }
+    .day-contact-card .email { font-size: 11px; color: #666; margin-top: 2px; }
+    .day-contact-card .badges { display: flex; gap: 4px; margin-top: 6px; flex-wrap: wrap; }
+    .day-contact-card .badge {
+      font-size: 9px;
+      padding: 2px 6px;
+      border-radius: 10px;
+      background: #e2e8f0;
+    }
+    .day-contact-card .badge.green { background: #c6f6d5; color: #276749; }
+    .day-contact-card .badge.purple { background: #e9d8fd; color: #553c9a; }
+    .day-contact-card .badge.orange { background: #feebc8; color: #c05621; }
+
+    /* ===== CONTACT DETAIL SECTION ===== */
+    .contact-section {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      display: none;
+    }
+
+    .contact-section.visible { display: block; }
+
+    .contact-header {
+      padding: 20px;
+      border-bottom: 1px solid #eee;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+
+    .contact-info h2 { font-size: 18px; font-weight: 600; }
+    .contact-info .email { color: #666; font-size: 13px; margin-top: 3px; }
+    .contact-info .phone { color: #888; font-size: 12px; margin-top: 2px; }
+
+    .contact-stats {
+      display: flex;
+      gap: 20px;
+    }
+
+    .contact-stat {
+      text-align: center;
+    }
+
+    .contact-stat .num { font-size: 20px; font-weight: 700; color: #667eea; }
+    .contact-stat .lbl { font-size: 10px; color: #888; text-transform: uppercase; }
+
+    .contact-badges {
+      padding: 15px 20px;
+      border-bottom: 1px solid #eee;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .contact-badge {
+      padding: 5px 12px;
+      border-radius: 15px;
+      font-size: 11px;
+      background: #e2e8f0;
+    }
+
+    .contact-badge.green { background: #c6f6d5; color: #276749; }
+    .contact-badge.purple { background: #e9d8fd; color: #553c9a; }
+    .contact-badge.orange { background: #feebc8; color: #c05621; }
+    .contact-badge.blue { background: #bee3f8; color: #2b6cb0; }
+    .contact-badge.red { background: #fed7d7; color: #c53030; }
+
+    .contact-timeline {
+      padding: 20px;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .timeline-item {
+      display: flex;
+      gap: 12px;
+      padding: 12px 0;
+      border-bottom: 1px solid #f5f5f5;
+    }
+
+    .timeline-item:last-child { border-bottom: none; }
+
+    .timeline-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+
+    .timeline-icon.contact { background: #bee3f8; }
+    .timeline-icon.quiz { background: #faf089; }
+    .timeline-icon.masterclass { background: #e9d8fd; }
+    .timeline-icon.call { background: #feebc8; }
+    .timeline-icon.purchase { background: #c6f6d5; }
+    .timeline-icon.email { background: #e2e8f0; }
+
+    .timeline-content { flex: 1; }
+    .timeline-content .event { font-weight: 500; font-size: 13px; }
+    .timeline-content .details { font-size: 12px; color: #666; margin-top: 2px; }
+    .timeline-content .time { font-size: 10px; color: #999; margin-top: 3px; }
+
+    /* ===== LOADING ===== */
+    .loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 60px;
+      color: #666;
+    }
+
+    .loading::after {
+      content: '';
+      width: 24px;
+      height: 24px;
+      border: 3px solid #ddd;
+      border-top-color: #667eea;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-left: 12px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .empty-state {
+      padding: 40px;
+      text-align: center;
+      color: #888;
+    }
+
+    .close-btn {
+      background: none;
+      border: none;
+      font-size: 20px;
+      cursor: pointer;
+      color: #666;
+      padding: 5px;
+    }
+
+    .close-btn:hover { color: #333; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <h1>Sales Dashboard</h1>
+      <div class="meta">Emotional Sobriety Coaching</div>
+    </div>
+    <div class="meta" id="sync-status">Loading...</div>
+  </div>
+
+  <div class="container">
+    <div id="loading" class="loading">Connecting to database...</div>
+
+    <div id="dashboard" style="display: none;">
+      <!-- KPI Section -->
+      <div class="kpi-section">
+        <div class="kpi-header">
+          <h2>Overview</h2>
+          <div class="timeframe-pills">
+            <button class="pill" onclick="setKpiTimeframe(7)">7 days</button>
+            <button class="pill active" onclick="setKpiTimeframe(30)">30 days</button>
+            <button class="pill" onclick="setKpiTimeframe(90)">90 days</button>
+            <button class="pill" onclick="setKpiTimeframe(0)">All time</button>
+          </div>
+        </div>
+        <div class="kpi-grid" id="kpi-grid"></div>
+      </div>
+
+      <!-- Chart Section -->
+      <div class="chart-section">
+        <div class="chart-header">
+          <h2>Journey Timeline</h2>
+          <div class="filter-row" id="chart-filters"></div>
+        </div>
+        <div class="chart-container" id="chart-container"></div>
+        <div class="chart-legend" id="chart-legend"></div>
+        <div class="day-detail" id="day-detail">
+          <div class="day-detail-header">
+            <h3 id="day-detail-title">Contacts</h3>
+            <button class="close-btn" onclick="closeDayDetail()">&times;</button>
+          </div>
+          <div class="day-contacts-grid" id="day-contacts-grid"></div>
+        </div>
+      </div>
+
+      <!-- Contact Detail Section -->
+      <div class="contact-section" id="contact-section">
+        <div class="contact-header">
+          <div class="contact-info">
+            <h2 id="contact-name">-</h2>
+            <div class="email" id="contact-email">-</div>
+            <div class="phone" id="contact-phone">-</div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 20px;">
+            <div class="contact-stats" id="contact-stats"></div>
+            <button class="close-btn" onclick="closeContactDetail()">&times;</button>
+          </div>
+        </div>
+        <div class="contact-badges" id="contact-badges"></div>
+        <div class="contact-timeline" id="contact-timeline"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // =========================================================================
+    // SUPABASE CONNECTION
+    // =========================================================================
+    // Set these environment variables before deploying
+    const SUPABASE_URL = 'YOUR_SUPABASE_URL';
+    const SUPABASE_KEY = 'YOUR_SUPABASE_ANON_KEY';
+
+    const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // =========================================================================
+    // STATE
+    // =========================================================================
+    let contacts = [];
+    let kpiTimeframe = 30;
+    let chartDays = 30;
+    let selectedDay = null;
+    let selectedContact = null;
+
+    const filters = {
+      quiz: true,
+      masterclass: true,
+      booked: true,
+      purchased: true,
+      new: true
+    };
+
+    const CATEGORIES = [
+      { key: 'new', label: 'New Contacts', color: '#bee3f8' },
+      { key: 'quiz', label: 'Quiz Taken', color: '#faf089' },
+      { key: 'masterclass', label: 'Masterclass', color: '#d6bcfa' },
+      { key: 'booked', label: 'Booked Call', color: '#ed8936' },
+      { key: 'purchased', label: 'Purchased', color: '#48bb78' }
+    ];
+
+    // =========================================================================
+    // INIT
+    // =========================================================================
+    async function init() {
+      try {
+        // Fetch all contacts with pagination (Supabase limits to 1000 per request)
+        let allContacts = [];
+        let from = 0;
+        const pageSize = 1000;
+        let totalCount = 0;
+
+        while (true) {
+          const { data, error, count } = await db
+            .from('contacts')
+            .select('*', { count: 'exact' })
+            .order('created_at', { ascending: false })
+            .range(from, from + pageSize - 1);
+
+          if (error) throw error;
+          if (!data || data.length === 0) break;
+
+          allContacts = allContacts.concat(data);
+          if (count) totalCount = count;
+
+          document.getElementById('sync-status').textContent = `Loading ${allContacts.length}/${totalCount}...`;
+
+          if (data.length < pageSize) break;
+          from += pageSize;
+        }
+
+        contacts = allContacts;
+
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('dashboard').style.display = 'block';
+        document.getElementById('sync-status').textContent = `${contacts.length} contacts`;
+
+        renderKPIs();
+        renderChartFilters();
+        renderChart();
+      } catch (err) {
+        console.error('Init error:', err);
+        document.getElementById('loading').textContent = 'Error loading data: ' + err.message;
+      }
+    }
+
+    // =========================================================================
+    // KPIs
+    // =========================================================================
+    function setKpiTimeframe(days) {
+      kpiTimeframe = days;
+      document.querySelectorAll('.kpi-section .pill').forEach(p => {
+        p.classList.toggle('active',
+          (days === 7 && p.textContent === '7 days') ||
+          (days === 30 && p.textContent === '30 days') ||
+          (days === 90 && p.textContent === '90 days') ||
+          (days === 0 && p.textContent === 'All time')
+        );
+      });
+      renderKPIs();
+    }
+
+    function renderKPIs() {
+      const now = new Date();
+      const cutoff = kpiTimeframe > 0
+        ? new Date(now - kpiTimeframe * 24 * 60 * 60 * 1000)
+        : new Date(0);
+
+      const filtered = contacts.filter(c => new Date(c.created_at) >= cutoff);
+
+      const total = filtered.length;
+      const quizTaken = filtered.filter(c => c.quiz_taken).length;
+      const masterclass = filtered.filter(c => c.masterclass_taken).length;
+      const smd = filtered.filter(c => c.smd_purchased).length;
+      const rise = filtered.filter(c => c.rise_purchased).length;
+      const bundle = filtered.filter(c => c.bundle_purchased).length;
+      const totalPurchased = filtered.filter(c => c.smd_purchased || c.rise_purchased || c.bundle_purchased).length;
+      const hasDiscoveryCall = filtered.filter(c => c.current_discovery_call).length;
+
+      const html = `
+        <div class="kpi-card">
+          <div class="label">Total Contacts</div>
+          <div class="value">${total.toLocaleString()}</div>
+        </div>
+        <div class="kpi-card green">
+          <div class="label">Quiz Taken</div>
+          <div class="value">${quizTaken.toLocaleString()}</div>
+          <div class="change">${total > 0 ? ((quizTaken/total)*100).toFixed(1) : 0}%</div>
+        </div>
+        <div class="kpi-card purple">
+          <div class="label">Masterclass</div>
+          <div class="value">${masterclass.toLocaleString()}</div>
+          <div class="change">${total > 0 ? ((masterclass/total)*100).toFixed(1) : 0}%</div>
+        </div>
+        <div class="kpi-card orange">
+          <div class="label">Discovery Calls</div>
+          <div class="value">${hasDiscoveryCall.toLocaleString()}</div>
+        </div>
+        <div class="kpi-card blue">
+          <div class="label">Purchased</div>
+          <div class="value">${totalPurchased.toLocaleString()}</div>
+          <div class="change">${quizTaken > 0 ? ((totalPurchased/quizTaken)*100).toFixed(1) : 0}% of quiz</div>
+        </div>
+        <div class="kpi-card">
+          <div class="label">SMD / RISE / Bundle</div>
+          <div class="value">${smd} / ${rise} / ${bundle}</div>
+        </div>
+      `;
+
+      document.getElementById('kpi-grid').innerHTML = html;
+    }
+
+    // =========================================================================
+    // CHART
+    // =========================================================================
+    function renderChartFilters() {
+      const html = CATEGORIES.map(cat => `
+        <button class="filter-pill ${filters[cat.key] ? 'active' : ''}"
+                onclick="toggleFilter('${cat.key}')"
+                style="${filters[cat.key] ? '' : 'opacity: 0.5'}">
+          <span class="dot" style="background: ${cat.color}"></span>
+          ${cat.label}
+        </button>
+      `).join('');
+
+      document.getElementById('chart-filters').innerHTML = html;
+
+      // Legend
+      const legendHtml = CATEGORIES.map(cat => `
+        <div class="legend-item">
+          <span class="legend-dot" style="background: ${cat.color}"></span>
+          ${cat.label}
+        </div>
+      `).join('');
+      document.getElementById('chart-legend').innerHTML = legendHtml;
+    }
+
+    function toggleFilter(key) {
+      filters[key] = !filters[key];
+      renderChartFilters();
+      renderChart();
+    }
+
+    function renderChart() {
+      const now = new Date();
+      const days = [];
+
+      for (let i = chartDays - 1; i >= 0; i--) {
+        const d = new Date(now);
+        d.setDate(d.getDate() - i);
+        d.setHours(0, 0, 0, 0);
+        days.push(d);
+      }
+
+      // Build data per day
+      const dayData = days.map(day => {
+        const nextDay = new Date(day);
+        nextDay.setDate(nextDay.getDate() + 1);
+
+        const dayContacts = contacts.filter(c => {
+          const created = new Date(c.created_at);
+          return created >= day && created < nextDay;
+        });
+
+        return {
+          date: day,
+          new: dayContacts.length,
+          quiz: dayContacts.filter(c => c.quiz_taken).length,
+          masterclass: dayContacts.filter(c => c.masterclass_taken).length,
+          booked: dayContacts.filter(c => c.current_discovery_call).length,
+          purchased: dayContacts.filter(c => c.smd_purchased || c.rise_purchased || c.bundle_purchased).length,
+          contacts: dayContacts
+        };
+      });
+
+      // Find max for scaling
+      const maxVal = Math.max(...dayData.map(d => {
+        let sum = 0;
+        CATEGORIES.forEach(cat => {
+          if (filters[cat.key]) sum += d[cat.key];
+        });
+        return sum;
+      }), 1);
+
+      const html = dayData.map((d, i) => {
+        const dateStr = d.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        const isSelected = selectedDay && d.date.getTime() === selectedDay.getTime();
+
+        // Build stacked bars (bottom to top)
+        let stackHtml = '';
+        CATEGORIES.slice().reverse().forEach(cat => {
+          if (filters[cat.key] && d[cat.key] > 0) {
+            const height = (d[cat.key] / maxVal) * 140;
+            stackHtml += `<div class="chart-bar ${cat.key}" style="height: ${height}px"></div>`;
+          }
+        });
+
+        return `
+          <div class="chart-bar-group ${isSelected ? 'selected' : ''}" onclick="selectDay(${i})">
+            <div class="chart-bar-stack">${stackHtml}</div>
+            <div class="chart-bar-date">${i % 3 === 0 ? dateStr : ''}</div>
+          </div>
+        `;
+      }).join('');
+
+      document.getElementById('chart-container').innerHTML = html;
+
+      // Store for click handling
+      window._dayData = dayData;
+    }
+
+    function selectDay(index) {
+      const dayData = window._dayData[index];
+      selectedDay = dayData.date;
+
+      renderChart();
+
+      // Show day detail
+      const dateStr = dayData.date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+      document.getElementById('day-detail-title').textContent = `${dateStr} (${dayData.contacts.length} contacts)`;
+
+      const contactsHtml = dayData.contacts.map(c => {
+        const badges = [];
+        if (c.quiz_taken) badges.push('<span class="badge purple">Quiz</span>');
+        if (c.masterclass_taken) badges.push('<span class="badge purple">MC</span>');
+        if (c.current_discovery_call) badges.push('<span class="badge orange">Call</span>');
+        if (c.smd_purchased || c.rise_purchased || c.bundle_purchased) badges.push('<span class="badge green">Purchased</span>');
+
+        return `
+          <div class="day-contact-card ${selectedContact?.id === c.id ? 'selected' : ''}"
+               onclick="selectContact('${c.id}')">
+            <div class="name">${c.first_name || ''} ${c.last_name || ''}</div>
+            <div class="email">${c.email || '-'}</div>
+            <div class="badges">${badges.join('')}</div>
+          </div>
+        `;
+      }).join('') || '<div class="empty-state">No contacts this day</div>';
+
+      document.getElementById('day-contacts-grid').innerHTML = contactsHtml;
+      document.getElementById('day-detail').classList.add('visible');
+    }
+
+    function closeDayDetail() {
+      selectedDay = null;
+      document.getElementById('day-detail').classList.remove('visible');
+      renderChart();
+    }
+
+    // =========================================================================
+    // CONTACT DETAIL
+    // =========================================================================
+    function selectContact(id) {
+      selectedContact = contacts.find(c => c.id === id);
+      if (!selectedContact) return;
+
+      // Re-render day contacts to show selection
+      if (selectedDay) {
+        const dayData = window._dayData.find(d => d.date.getTime() === selectedDay.getTime());
+        if (dayData) {
+          const contactsHtml = dayData.contacts.map(c => {
+            const badges = [];
+            if (c.quiz_taken) badges.push('<span class="badge purple">Quiz</span>');
+            if (c.masterclass_taken) badges.push('<span class="badge purple">MC</span>');
+            if (c.current_discovery_call) badges.push('<span class="badge orange">Call</span>');
+            if (c.smd_purchased || c.rise_purchased || c.bundle_purchased) badges.push('<span class="badge green">Purchased</span>');
+
+            return `
+              <div class="day-contact-card ${c.id === id ? 'selected' : ''}"
+                   onclick="selectContact('${c.id}')">
+                <div class="name">${c.first_name || ''} ${c.last_name || ''}</div>
+                <div class="email">${c.email || '-'}</div>
+                <div class="badges">${badges.join('')}</div>
+              </div>
+            `;
+          }).join('');
+          document.getElementById('day-contacts-grid').innerHTML = contactsHtml;
+        }
+      }
+
+      renderContactDetail();
+    }
+
+    function renderContactDetail() {
+      const c = selectedContact;
+
+      document.getElementById('contact-name').textContent = `${c.first_name || ''} ${c.last_name || ''}`.trim() || 'Unknown';
+      document.getElementById('contact-email').textContent = c.email || '-';
+      document.getElementById('contact-phone').textContent = c.phone || '-';
+
+      // Stats
+      const statsHtml = `
+        <div class="contact-stat">
+          <div class="num">${c.amount_paid || '-'}</div>
+          <div class="lbl">Paid</div>
+        </div>
+        <div class="contact-stat">
+          <div class="num">${c.setter || '-'}</div>
+          <div class="lbl">Setter</div>
+        </div>
+        <div class="contact-stat">
+          <div class="num">${c.closer || '-'}</div>
+          <div class="lbl">Closer</div>
+        </div>
+      `;
+      document.getElementById('contact-stats').innerHTML = statsHtml;
+
+      // Badges
+      const badges = [];
+      if (c.quiz_taken) badges.push('<span class="contact-badge purple">Quiz Taken</span>');
+      if (c.masterclass_taken) badges.push('<span class="contact-badge purple">Masterclass</span>');
+      if (c.smd_purchased) badges.push('<span class="contact-badge green">SMD</span>');
+      if (c.rise_purchased) badges.push('<span class="contact-badge green">RISE</span>');
+      if (c.bundle_purchased) badges.push('<span class="contact-badge green">Bundle</span>');
+      if (c.current_discovery_call) badges.push('<span class="contact-badge orange">Discovery Call Scheduled</span>');
+      if (c.lead_source) badges.push(`<span class="contact-badge blue">Source: ${c.lead_source}</span>`);
+      if (c.opt_in_status) badges.push(`<span class="contact-badge">Opt-in: ${c.opt_in_status}</span>`);
+
+      document.getElementById('contact-badges').innerHTML = badges.join('') || '<span class="contact-badge">No badges</span>';
+
+      // Timeline (simplified - just key events from fields)
+      const timeline = [];
+
+      if (c.created_at) {
+        timeline.push({
+          icon: 'contact',
+          event: 'Contact Created',
+          details: c.lead_source ? `Source: ${c.lead_source}` : '',
+          time: new Date(c.created_at)
+        });
+      }
+
+      if (c.quiz_taken) {
+        timeline.push({
+          icon: 'quiz',
+          event: 'Completed Drinking Quiz',
+          details: '',
+          time: new Date(c.created_at) // Approximate
+        });
+      }
+
+      if (c.masterclass_taken) {
+        timeline.push({
+          icon: 'masterclass',
+          event: 'Attended Masterclass',
+          details: '',
+          time: new Date(c.created_at) // Approximate
+        });
+      }
+
+      if (c.current_discovery_call) {
+        timeline.push({
+          icon: 'call',
+          event: 'Discovery Call Scheduled',
+          details: c.current_discovery_call,
+          time: new Date(c.current_discovery_call) || new Date()
+        });
+      }
+
+      if (c.date_paid) {
+        timeline.push({
+          icon: 'purchase',
+          event: 'Purchase Made',
+          details: `$${c.amount_paid || '?'}`,
+          time: new Date(c.date_paid)
+        });
+      }
+
+      if (c.program_start) {
+        timeline.push({
+          icon: 'purchase',
+          event: 'Program Started',
+          details: '',
+          time: new Date(c.program_start)
+        });
+      }
+
+      // Sort by time
+      timeline.sort((a, b) => a.time - b.time);
+
+      const timelineHtml = timeline.map(t => `
+        <div class="timeline-item">
+          <div class="timeline-icon ${t.icon}">
+            ${t.icon === 'contact' ? '👤' : t.icon === 'quiz' ? '📝' : t.icon === 'masterclass' ? '🎓' : t.icon === 'call' ? '📞' : t.icon === 'purchase' ? '💰' : '📧'}
+          </div>
+          <div class="timeline-content">
+            <div class="event">${t.event}</div>
+            ${t.details ? `<div class="details">${t.details}</div>` : ''}
+            <div class="time">${t.time.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
+          </div>
+        </div>
+      `).join('') || '<div class="empty-state">No timeline events</div>';
+
+      document.getElementById('contact-timeline').innerHTML = timelineHtml;
+      document.getElementById('contact-section').classList.add('visible');
+    }
+
+    function closeContactDetail() {
+      selectedContact = null;
+      document.getElementById('contact-section').classList.remove('visible');
+    }
+
+    // =========================================================================
+    // START
+    // =========================================================================
+    init();
+  </script>
+</body>
+</html>

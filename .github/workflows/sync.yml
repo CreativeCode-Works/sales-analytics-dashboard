@@ -12,6 +12,7 @@ on:
           - test          # 5 contacts — for verification
           - days          # Contacts created in last N days
           - fix-fields    # Re-fetch field values only (fast)
+          - dump-fields   # List all AC field definitions (IDs)
           - incremental   # Only contacts updated since last sync
           - full          # All contacts (slow, hours)
       days:
@@ -62,6 +63,9 @@ jobs:
           elif [ "$MODE" = "days" ]; then
             echo "script=sync-full.js --days $DAYS" >> $GITHUB_OUTPUT
             echo "desc=Sync last $DAYS days" >> $GITHUB_OUTPUT
+          elif [ "$MODE" = "dump-fields" ]; then
+            echo "script=dump-fields.js" >> $GITHUB_OUTPUT
+            echo "desc=Dump AC field definitions" >> $GITHUB_OUTPUT
           elif [ "$MODE" = "fix-fields" ]; then
             echo "script=fix-field-values.js --days $DAYS" >> $GITHUB_OUTPUT
             echo "desc=Fix field values (last $DAYS days)" >> $GITHUB_OUTPUT

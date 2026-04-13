@@ -38,6 +38,7 @@ const getArg = (flag) => { const i = args.indexOf(flag); return i !== -1 ? args[
 const LIMIT_CONTACTS = getArg('--limit') ? parseInt(getArg('--limit')) : null;
 const START_OFFSET = getArg('--offset') ? parseInt(getArg('--offset')) : 0;
 const SINGLE_CONTACT = getArg('--contact');
+const DAYS = getArg('--days') ? parseInt(getArg('--days')) : null;
 
 // AC custom field mapping (same as existing sync.js)
 const FIELD_MAP = {
@@ -870,8 +871,17 @@ async function run() {
     let offset = START_OFFSET;
     const pageSize = 100;
 
+    // Build date filter if --days specified
+    let dateFilter = '';
+    if (DAYS) {
+      const afterDate = new Date(Date.now() - DAYS * 24 * 60 * 60 * 1000);
+      const afterStr = afterDate.toISOString();
+      dateFilter = `&filters[created_after]=${encodeURIComponent(afterStr)}`;
+      console.log(`Filtering contacts created after: ${afterStr.split('T')[0]} (last ${DAYS} days)`);
+    }
+
     // Get total count first
-    const firstPage = await fetchAC(`/contacts?limit=1&offset=0`);
+    const firstPage = await fetchAC(`/contacts?limit=1&offset=0${dateFilter}`);
     totalContacts = parseInt(firstPage.meta?.total || 0);
     console.log(`AC total contacts: ${totalContacts}`);
     if (LIMIT_CONTACTS) console.log(`Limiting to ${LIMIT_CONTACTS} contacts`);
@@ -880,7 +890,7 @@ async function run() {
     while (true) {
       if (LIMIT_CONTACTS && totalProcessed >= LIMIT_CONTACTS) break;
 
-      const data = await fetchAC(`/contacts?limit=${pageSize}&offset=${offset}&orders[]=cdate`);
+      const data = await fetchAC(`/contacts?limit=${pageSize}&offset=${offset}&orders[]=cdate${dateFilter}`);
       const contacts = data.contacts || [];
       if (contacts.length === 0) break;
 

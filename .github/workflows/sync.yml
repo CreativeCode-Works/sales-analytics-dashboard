@@ -10,8 +10,13 @@ on:
         type: choice
         options:
           - test          # 5 contacts — for verification
+          - days          # Contacts created in last N days
           - incremental   # Only contacts updated since last sync
           - full          # All contacts (slow, hours)
+      days:
+        description: 'Number of days (days mode only)'
+        required: false
+        default: '7'
       limit:
         description: 'Max contacts (test/full mode only)'
         required: false
@@ -45,6 +50,7 @@ jobs:
           MODE="${{ github.event.inputs.mode || 'incremental' }}"
           CONTACT="${{ github.event.inputs.contact_id }}"
           LIMIT="${{ github.event.inputs.limit || '5' }}"
+          DAYS="${{ github.event.inputs.days || '7' }}"
 
           if [ -n "$CONTACT" ]; then
             echo "script=sync-full.js --contact $CONTACT" >> $GITHUB_OUTPUT
@@ -52,6 +58,9 @@ jobs:
           elif [ "$MODE" = "test" ]; then
             echo "script=sync-full.js --limit $LIMIT" >> $GITHUB_OUTPUT
             echo "desc=Test sync ($LIMIT contacts)" >> $GITHUB_OUTPUT
+          elif [ "$MODE" = "days" ]; then
+            echo "script=sync-full.js --days $DAYS" >> $GITHUB_OUTPUT
+            echo "desc=Sync last $DAYS days" >> $GITHUB_OUTPUT
           elif [ "$MODE" = "full" ]; then
             if [ -n "$LIMIT" ] && [ "$LIMIT" != "5" ]; then
               echo "script=sync-full.js --limit $LIMIT" >> $GITHUB_OUTPUT

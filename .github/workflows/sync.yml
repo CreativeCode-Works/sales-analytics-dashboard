@@ -1,0 +1,81 @@
+name: Sync AC Data
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Sync mode'
+        required: true
+        default: 'test'
+        type: choice
+        options:
+          - test          # 5 contacts — for verification
+          - incremental   # Only contacts updated since last sync
+          - full          # All contacts (slow, hours)
+      limit:
+        description: 'Max contacts (test/full mode only)'
+        required: false
+        default: '5'
+      contact_id:
+        description: 'Single contact ID (overrides mode)'
+        required: false
+  schedule:
+    # Incremental sync every 15 minutes
+    - cron: '*/15 * * * *'
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360  # 6 hour max for full syncs
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        working-directory: scripts
+        run: npm ci
+
+      - name: Run migration
+        working-directory: scripts
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: node run-migration.js migrations/001_expanded_tables.sql
+
+      - name: Determine sync command
+        id: cmd
+        run: |
+          MODE="${{ github.event.inputs.mode || 'incremental' }}"
+          CONTACT="${{ github.event.inputs.contact_id }}"
+          LIMIT="${{ github.event.inputs.limit || '5' }}"
+
+          if [ -n "$CONTACT" ]; then
+            echo "script=sync-full.js --contact $CONTACT" >> $GITHUB_OUTPUT
+            echo "desc=Single contact $CONTACT" >> $GITHUB_OUTPUT
+          elif [ "$MODE" = "test" ]; then
+            echo "script=sync-full.js --limit $LIMIT" >> $GITHUB_OUTPUT
+            echo "desc=Test sync ($LIMIT contacts)" >> $GITHUB_OUTPUT
+          elif [ "$MODE" = "full" ]; then
+            if [ -n "$LIMIT" ] && [ "$LIMIT" != "5" ]; then
+              echo "script=sync-full.js --limit $LIMIT" >> $GITHUB_OUTPUT
+              echo "desc=Full sync (limit $LIMIT)" >> $GITHUB_OUTPUT
+            else
+              echo "script=sync-full.js" >> $GITHUB_OUTPUT
+              echo "desc=Full sync (all contacts)" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "script=sync-incremental-full.js" >> $GITHUB_OUTPUT
+            echo "desc=Incremental sync" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run sync — ${{ steps.cmd.outputs.desc }}
+        working-directory: scripts
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          AC_KEY: ${{ secrets.AC_KEY }}
+          AC_BASE: ${{ secrets.AC_BASE }}
+        run: node ${{ steps.cmd.outputs.script }}

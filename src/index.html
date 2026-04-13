@@ -7,391 +7,166 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f1117; color: #e2e8f0; line-height: 1.6; }
 
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #f5f7fa;
-      color: #333;
-      line-height: 1.6;
-    }
+    /* ===== HEADER ===== */
+    .header { background: #1a1d2e; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #2d3148; }
+    .header h1 { font-size: 20px; font-weight: 600; color: #fff; }
+    .header .meta { font-size: 12px; color: #8b95b0; }
+    .header-right { display: flex; align-items: center; gap: 16px; }
 
-    .header {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-      padding: 20px 30px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
+    .container { max-width: 1500px; margin: 0 auto; padding: 16px; }
 
-    .header h1 { font-size: 22px; font-weight: 600; }
-    .header .meta { font-size: 13px; opacity: 0.9; }
-
-    .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
-
-    /* ===== KPI SECTION ===== */
-    .kpi-section {
-      background: white;
-      border-radius: 12px;
-      padding: 20px;
-      margin-bottom: 20px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-    }
-
-    .kpi-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 15px;
-    }
-
-    .kpi-header h2 { font-size: 16px; font-weight: 600; }
-
-    .timeframe-pills {
-      display: flex;
-      gap: 8px;
-    }
-
-    .pill {
-      padding: 6px 14px;
-      border-radius: 20px;
-      font-size: 12px;
-      cursor: pointer;
-      border: 1px solid #ddd;
-      background: white;
-      transition: all 0.2s;
-    }
-
-    .pill:hover { background: #f0f0f0; }
+    /* ===== TIMEFRAME BAR ===== */
+    .timeframe-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .timeframe-pills { display: flex; gap: 6px; }
+    .pill { padding: 6px 14px; border-radius: 6px; font-size: 12px; cursor: pointer; border: 1px solid #2d3148; background: #1a1d2e; color: #8b95b0; transition: all 0.15s; }
+    .pill:hover { border-color: #667eea; color: #c4cbdd; }
     .pill.active { background: #667eea; color: white; border-color: #667eea; }
 
-    .kpi-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-      gap: 15px;
-    }
+    /* ===== KPI SECTION ===== */
+    .kpi-row { background: #1a1d2e; border-radius: 10px; padding: 16px; margin-bottom: 12px; border: 1px solid #2d3148; }
+    .kpi-row-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .kpi-row-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; padding: 3px 10px; border-radius: 4px; }
+    .kpi-row-label.tofu { background: #667eea20; color: #667eea; }
+    .kpi-row-label.mofu { background: #ed893620; color: #ed8936; }
+    .kpi-row-label.bofu { background: #48bb7820; color: #48bb78; }
 
-    .kpi-card {
-      padding: 15px;
-      border-radius: 10px;
-      background: linear-gradient(135deg, #f8f9fc 0%, #f0f2f8 100%);
-      border-left: 4px solid #667eea;
-    }
-
-    .kpi-card.green { border-left-color: #48bb78; }
-    .kpi-card.orange { border-left-color: #ed8936; }
-    .kpi-card.purple { border-left-color: #9f7aea; }
-    .kpi-card.red { border-left-color: #e53e3e; }
-    .kpi-card.blue { border-left-color: #4299e1; }
-
-    .kpi-card .label { font-size: 11px; color: #666; text-transform: uppercase; letter-spacing: 0.5px; }
-    .kpi-card .value { font-size: 28px; font-weight: 700; margin-top: 5px; }
-    .kpi-card .change { font-size: 11px; color: #48bb78; margin-top: 3px; }
-    .kpi-card .change.negative { color: #e53e3e; }
+    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+    .kpi-card { padding: 12px; border-radius: 8px; background: #0f1117; border: 1px solid #2d3148; }
+    .kpi-card .label { font-size: 10px; color: #8b95b0; text-transform: uppercase; letter-spacing: 0.5px; }
+    .kpi-card .value { font-size: 24px; font-weight: 700; color: #fff; margin-top: 2px; }
+    .kpi-card .sub { font-size: 10px; color: #667eea; margin-top: 2px; }
+    .kpi-card .split { display: flex; gap: 8px; margin-top: 4px; }
+    .kpi-card .split-item { font-size: 10px; color: #8b95b0; }
+    .kpi-card .split-item strong { color: #c4cbdd; }
 
     /* ===== CHART SECTION ===== */
-    .chart-section {
-      background: white;
-      border-radius: 12px;
-      padding: 20px;
-      margin-bottom: 20px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-    }
+    .chart-section { background: #1a1d2e; border-radius: 10px; padding: 16px; margin-bottom: 12px; border: 1px solid #2d3148; }
+    .chart-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; flex-wrap: wrap; gap: 10px; }
+    .chart-header h2 { font-size: 16px; font-weight: 600; color: #fff; }
 
-    .chart-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 15px;
-      flex-wrap: wrap;
-      gap: 15px;
-    }
+    .filter-section { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+    .filter-group-label { font-size: 10px; color: #8b95b0; text-transform: uppercase; letter-spacing: 1px; width: 100%; margin-top: 4px; }
+    .filter-pill { padding: 4px 10px; border-radius: 5px; font-size: 11px; cursor: pointer; border: 1px solid #2d3148; background: #0f1117; color: #8b95b0; transition: all 0.15s; display: flex; align-items: center; gap: 5px; }
+    .filter-pill:hover { border-color: #667eea; }
+    .filter-pill.active { background: #667eea30; color: #c4cbdd; border-color: #667eea; }
+    .filter-pill .dot { width: 8px; height: 8px; border-radius: 2px; }
 
-    .chart-header h2 { font-size: 16px; font-weight: 600; }
-
-    .filter-row {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-
-    .filter-pill {
-      padding: 5px 12px;
-      border-radius: 15px;
-      font-size: 11px;
-      cursor: pointer;
-      border: 1px solid #e2e8f0;
-      background: white;
-      transition: all 0.2s;
-      display: flex;
-      align-items: center;
-      gap: 5px;
-    }
-
-    .filter-pill:hover { background: #f7fafc; }
-    .filter-pill.active { background: #667eea; color: white; border-color: #667eea; }
-    .filter-pill .dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-    }
-
-    .chart-container {
-      height: 200px;
-      display: flex;
-      align-items: flex-end;
-      gap: 2px;
-      padding: 10px 0;
-      border-bottom: 1px solid #e2e8f0;
-    }
-
-    .chart-bar-group {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      cursor: pointer;
-      min-width: 0;
-    }
-
-    .chart-bar-group:hover { background: rgba(102, 126, 234, 0.05); border-radius: 4px; }
-    .chart-bar-group.selected { background: rgba(102, 126, 234, 0.15); border-radius: 4px; }
-
-    .chart-bar-stack {
-      width: 100%;
-      max-width: 30px;
-      display: flex;
-      flex-direction: column;
-      justify-content: flex-end;
-      height: 160px;
-    }
-
-    .chart-bar {
-      width: 100%;
-      transition: all 0.2s;
-    }
-
+    .chart-wrapper { position: relative; display: flex; gap: 0; }
+    .chart-y-axis { width: 30px; display: flex; flex-direction: column; justify-content: space-between; align-items: flex-end; padding-right: 6px; height: 180px; }
+    .chart-y-label { font-size: 9px; color: #5a6178; }
+    .chart-area { flex: 1; position: relative; height: 180px; }
+    .chart-gridlines { position: absolute; top: 0; left: 0; right: 0; bottom: 20px; pointer-events: none; }
+    .chart-gridline { position: absolute; left: 0; right: 0; border-top: 1px dashed #2d3148; }
+    .chart-container { height: 180px; display: flex; align-items: flex-end; gap: 2px; padding: 0 0 20px 0; position: relative; }
+    .chart-bar-group { flex: 1; display: flex; flex-direction: column; align-items: center; cursor: pointer; min-width: 0; padding: 2px 0; border-radius: 4px; position: relative; }
+    .chart-bar-group:hover { background: rgba(102, 126, 234, 0.08); }
+    .chart-bar-group.selected { background: rgba(102, 126, 234, 0.15); }
+    .chart-bar-stack { width: 100%; max-width: 28px; display: flex; flex-direction: column; justify-content: flex-end; height: 140px; }
+    .chart-bar { width: 100%; transition: all 0.2s; }
     .chart-bar:first-child { border-radius: 3px 3px 0 0; }
+    .chart-bar-date { font-size: 9px; color: #5a6178; margin-top: 6px; white-space: nowrap; position: absolute; bottom: 0; }
 
-    .chart-bar.new { background: #bee3f8; }
-    .chart-bar.quiz { background: #faf089; }
-    .chart-bar.masterclass { background: #d6bcfa; }
-    .chart-bar.booked { background: #ed8936; }
-    .chart-bar.purchased { background: #48bb78; }
-    .chart-bar.optout { background: #e53e3e; }
+    /* Tooltip */
+    .chart-tooltip { position: fixed; background: #1a1d2e; border: 1px solid #2d3148; border-radius: 8px; padding: 10px 14px; pointer-events: none; z-index: 1000; display: none; min-width: 160px; box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
+    .chart-tooltip .tt-date { font-size: 12px; font-weight: 600; color: #fff; margin-bottom: 6px; }
+    .chart-tooltip .tt-row { display: flex; justify-content: space-between; gap: 12px; font-size: 11px; color: #8b95b0; padding: 1px 0; }
+    .chart-tooltip .tt-row .tt-val { color: #c4cbdd; font-weight: 600; }
 
-    .chart-bar-date {
-      font-size: 9px;
-      color: #999;
-      margin-top: 6px;
-      white-space: nowrap;
-    }
-
-    .chart-legend {
-      display: flex;
-      gap: 15px;
-      margin-top: 15px;
-      flex-wrap: wrap;
-    }
-
-    .legend-item {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 11px;
-      color: #666;
-    }
-
-    .legend-dot {
-      width: 10px;
-      height: 10px;
-      border-radius: 3px;
-    }
+    .chart-legend { display: flex; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
+    .legend-item { display: flex; align-items: center; gap: 5px; font-size: 10px; color: #8b95b0; }
+    .legend-dot { width: 10px; height: 10px; border-radius: 2px; }
 
     /* ===== DAY DETAIL ===== */
-    .day-detail {
-      background: #f8f9fa;
-      border-radius: 8px;
-      padding: 15px;
-      margin-top: 15px;
-      display: none;
-    }
-
+    .day-detail { background: #0f1117; border: 1px solid #2d3148; border-radius: 8px; padding: 14px; margin-top: 12px; display: none; }
     .day-detail.visible { display: block; }
-
-    .day-detail-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 12px;
-    }
-
-    .day-detail-header h3 { font-size: 14px; font-weight: 600; }
-
-    .day-contacts-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-      gap: 10px;
-      max-height: 200px;
-      overflow-y: auto;
-    }
-
-    .day-contact-card {
-      background: white;
-      border: 1px solid #e2e8f0;
-      border-radius: 6px;
-      padding: 10px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
+    .day-detail-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .day-detail-header h3 { font-size: 14px; font-weight: 600; color: #fff; }
+    .day-contacts-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; max-height: 250px; overflow-y: auto; }
+    .day-contact-card { background: #1a1d2e; border: 1px solid #2d3148; border-radius: 6px; padding: 10px; cursor: pointer; transition: all 0.15s; }
     .day-contact-card:hover { border-color: #667eea; }
-    .day-contact-card.selected { border-color: #667eea; background: #f0f4ff; }
-
-    .day-contact-card .name { font-weight: 600; font-size: 13px; }
-    .day-contact-card .email { font-size: 11px; color: #666; margin-top: 2px; }
+    .day-contact-card.selected { border-color: #667eea; background: #667eea15; }
+    .day-contact-card .name { font-weight: 600; font-size: 13px; color: #fff; }
+    .day-contact-card .email { font-size: 11px; color: #8b95b0; margin-top: 2px; }
     .day-contact-card .badges { display: flex; gap: 4px; margin-top: 6px; flex-wrap: wrap; }
-    .day-contact-card .badge {
-      font-size: 9px;
-      padding: 2px 6px;
-      border-radius: 10px;
-      background: #e2e8f0;
-    }
-    .day-contact-card .badge.green { background: #c6f6d5; color: #276749; }
-    .day-contact-card .badge.purple { background: #e9d8fd; color: #553c9a; }
-    .day-contact-card .badge.orange { background: #feebc8; color: #c05621; }
+    .badge { font-size: 9px; padding: 2px 6px; border-radius: 4px; background: #2d3148; color: #8b95b0; }
+    .badge.green { background: #48bb7830; color: #48bb78; }
+    .badge.purple { background: #9f7aea30; color: #9f7aea; }
+    .badge.orange { background: #ed893630; color: #ed8936; }
+    .badge.blue { background: #4299e130; color: #4299e1; }
+    .badge.red { background: #e53e3e30; color: #e53e3e; }
 
-    /* ===== CONTACT DETAIL SECTION ===== */
-    .contact-section {
-      background: white;
-      border-radius: 12px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-      display: none;
-    }
+    /* ===== CONTACT SECTION ===== */
+    .contact-section { display: none; }
+    .contact-section.visible { display: grid; grid-template-columns: 300px 1fr; gap: 12px; }
 
-    .contact-section.visible { display: block; }
+    /* Left: search + list */
+    .contact-sidebar { background: #1a1d2e; border-radius: 10px; border: 1px solid #2d3148; overflow: hidden; max-height: calc(100vh - 120px); display: flex; flex-direction: column; }
+    .search-box { padding: 12px; border-bottom: 1px solid #2d3148; }
+    .search-box input { width: 100%; padding: 8px 12px; border-radius: 6px; border: 1px solid #2d3148; background: #0f1117; color: #e2e8f0; font-size: 13px; outline: none; }
+    .search-box input:focus { border-color: #667eea; }
+    .quick-filters { padding: 8px 12px; display: flex; flex-wrap: wrap; gap: 4px; border-bottom: 1px solid #2d3148; }
+    .qf-pill { padding: 3px 8px; border-radius: 4px; font-size: 10px; cursor: pointer; background: #0f1117; color: #8b95b0; border: 1px solid #2d3148; }
+    .qf-pill:hover { border-color: #667eea; }
+    .qf-pill.active { background: #667eea30; color: #c4cbdd; border-color: #667eea; }
+    .contact-list { flex: 1; overflow-y: auto; padding: 8px; }
+    .contact-list-card { padding: 10px; border-radius: 6px; cursor: pointer; margin-bottom: 4px; transition: all 0.15s; }
+    .contact-list-card:hover { background: #0f1117; }
+    .contact-list-card.selected { background: #667eea15; border-left: 3px solid #667eea; }
+    .contact-list-card .cl-name { font-weight: 600; font-size: 13px; color: #fff; }
+    .contact-list-card .cl-email { font-size: 11px; color: #8b95b0; }
+    .contact-list-card .cl-tags { display: flex; gap: 3px; margin-top: 4px; flex-wrap: wrap; }
 
-    .contact-header {
-      padding: 20px;
-      border-bottom: 1px solid #eee;
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-    }
+    /* Right: detail */
+    .contact-detail { background: #1a1d2e; border-radius: 10px; border: 1px solid #2d3148; overflow-y: auto; max-height: calc(100vh - 120px); }
+    .cd-header { padding: 16px 20px; border-bottom: 1px solid #2d3148; }
+    .cd-name { font-size: 20px; font-weight: 700; color: #fff; }
+    .cd-email { font-size: 13px; color: #8b95b0; margin-top: 2px; }
+    .cd-phone { font-size: 12px; color: #5a6178; }
 
-    .contact-info h2 { font-size: 18px; font-weight: 600; }
-    .contact-info .email { color: #666; font-size: 13px; margin-top: 3px; }
-    .contact-info .phone { color: #888; font-size: 12px; margin-top: 2px; }
+    .cd-profile { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; padding: 16px 20px; border-bottom: 1px solid #2d3148; }
+    .cd-field { }
+    .cd-field .cd-label { font-size: 10px; color: #5a6178; text-transform: uppercase; letter-spacing: 0.5px; }
+    .cd-field .cd-val { font-size: 13px; color: #c4cbdd; margin-top: 2px; }
 
-    .contact-stats {
-      display: flex;
-      gap: 20px;
-    }
+    .cd-badges { padding: 12px 20px; border-bottom: 1px solid #2d3148; display: flex; flex-wrap: wrap; gap: 4px; }
 
-    .contact-stat {
-      text-align: center;
-    }
+    .cd-stats { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; padding: 16px 20px; border-bottom: 1px solid #2d3148; }
+    .cd-stat { text-align: center; }
+    .cd-stat .num { font-size: 22px; font-weight: 700; color: #667eea; }
+    .cd-stat .lbl { font-size: 9px; color: #5a6178; text-transform: uppercase; }
 
-    .contact-stat .num { font-size: 20px; font-weight: 700; color: #667eea; }
-    .contact-stat .lbl { font-size: 10px; color: #888; text-transform: uppercase; }
+    .cd-activity { padding: 16px 20px; border-bottom: 1px solid #2d3148; }
+    .cd-activity h3 { font-size: 14px; font-weight: 600; color: #fff; margin-bottom: 8px; }
+    .cd-activity-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .cd-mini-chart { display: flex; align-items: flex-end; gap: 3px; height: 80px; position: relative; }
+    .cd-mini-chart .mc-bar-group { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; height: 60px; }
+    .cd-mini-chart .mc-bar { width: 100%; }
+    .cd-mini-chart .mc-bar:first-child { border-radius: 2px 2px 0 0; }
+    .cd-mini-chart .mc-date { font-size: 8px; color: #5a6178; text-align: center; margin-top: 2px; }
+    .cd-mini-gridline { position: absolute; left: 0; right: 0; border-top: 1px dashed #2d3148; }
+    .cd-mini-legend { display: flex; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
+    .cd-mini-legend .legend-item { font-size: 10px; }
 
-    .contact-badges {
-      padding: 15px 20px;
-      border-bottom: 1px solid #eee;
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
+    .cd-tags-section, .cd-deals-section { padding: 12px 20px; border-bottom: 1px solid #2d3148; }
+    .cd-tags-section h4, .cd-deals-section h4 { font-size: 11px; color: #5a6178; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
 
-    .contact-badge {
-      padding: 5px 12px;
-      border-radius: 15px;
-      font-size: 11px;
-      background: #e2e8f0;
-    }
+    .cd-timeline { padding: 16px 20px; }
+    .cd-timeline h3 { font-size: 14px; font-weight: 600; color: #fff; margin-bottom: 8px; }
+    .tl-filters { display: flex; gap: 4px; margin-bottom: 10px; flex-wrap: wrap; }
+    .tl-item { display: flex; gap: 12px; padding: 8px 0; border-bottom: 1px solid #1e2235; }
+    .tl-icon { width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
+    .tl-content { flex: 1; min-width: 0; }
+    .tl-event { font-size: 13px; color: #c4cbdd; font-weight: 500; }
+    .tl-details { font-size: 11px; color: #8b95b0; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .tl-time { font-size: 10px; color: #5a6178; margin-top: 2px; }
 
-    .contact-badge.green { background: #c6f6d5; color: #276749; }
-    .contact-badge.purple { background: #e9d8fd; color: #553c9a; }
-    .contact-badge.orange { background: #feebc8; color: #c05621; }
-    .contact-badge.blue { background: #bee3f8; color: #2b6cb0; }
-    .contact-badge.red { background: #fed7d7; color: #c53030; }
-
-    .contact-timeline {
-      padding: 20px;
-      max-height: 400px;
-      overflow-y: auto;
-    }
-
-    .timeline-item {
-      display: flex;
-      gap: 12px;
-      padding: 12px 0;
-      border-bottom: 1px solid #f5f5f5;
-    }
-
-    .timeline-item:last-child { border-bottom: none; }
-
-    .timeline-icon {
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 14px;
-      flex-shrink: 0;
-    }
-
-    .timeline-icon.contact { background: #bee3f8; }
-    .timeline-icon.quiz { background: #faf089; }
-    .timeline-icon.masterclass { background: #e9d8fd; }
-    .timeline-icon.call { background: #feebc8; }
-    .timeline-icon.purchase { background: #c6f6d5; }
-    .timeline-icon.email { background: #e2e8f0; }
-
-    .timeline-content { flex: 1; }
-    .timeline-content .event { font-weight: 500; font-size: 13px; }
-    .timeline-content .details { font-size: 12px; color: #666; margin-top: 2px; }
-    .timeline-content .time { font-size: 10px; color: #999; margin-top: 3px; }
-
-    /* ===== LOADING ===== */
-    .loading {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 60px;
-      color: #666;
-    }
-
-    .loading::after {
-      content: '';
-      width: 24px;
-      height: 24px;
-      border: 3px solid #ddd;
-      border-top-color: #667eea;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      margin-left: 12px;
-    }
-
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    .empty-state {
-      padding: 40px;
-      text-align: center;
-      color: #888;
-    }
-
-    .close-btn {
-      background: none;
-      border: none;
-      font-size: 20px;
-      cursor: pointer;
-      color: #666;
-      padding: 5px;
-    }
-
-    .close-btn:hover { color: #333; }
+    /* ===== UTILITY ===== */
+    .close-btn { background: none; border: 1px solid #2d3148; color: #8b95b0; width: 28px; height: 28px; border-radius: 6px; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; }
+    .close-btn:hover { background: #2d3148; color: #fff; }
+    .loading { text-align: center; padding: 60px; color: #8b95b0; font-size: 14px; }
+    .empty-state { text-align: center; padding: 20px; color: #5a6178; font-size: 13px; }
   </style>
 </head>
 <body>
@@ -400,34 +175,63 @@
       <h1>Sales Dashboard</h1>
       <div class="meta">Emotional Sobriety Coaching</div>
     </div>
-    <div class="meta" id="sync-status">Loading...</div>
+    <div class="header-right">
+      <div class="meta" id="sync-status">Loading...</div>
+    </div>
   </div>
 
   <div class="container">
     <div id="loading" class="loading">Connecting to database...</div>
 
+    <div id="chart-tooltip" class="chart-tooltip"></div>
     <div id="dashboard" style="display: none;">
-      <!-- KPI Section -->
-      <div class="kpi-section">
-        <div class="kpi-header">
-          <h2>Overview</h2>
-          <div class="timeframe-pills">
-            <button class="pill" onclick="setKpiTimeframe(7)">7 days</button>
-            <button class="pill active" onclick="setKpiTimeframe(30)">30 days</button>
-            <button class="pill" onclick="setKpiTimeframe(90)">90 days</button>
-            <button class="pill" onclick="setKpiTimeframe(0)">All time</button>
-          </div>
+      <!-- Timeframe -->
+      <div class="timeframe-bar">
+        <div class="timeframe-pills">
+          <button class="pill" onclick="setTimeframe(7)">7d</button>
+          <button class="pill active" onclick="setTimeframe(30)">30d</button>
+          <button class="pill" onclick="setTimeframe(90)">90d</button>
+          <button class="pill" onclick="setTimeframe(0)">All</button>
         </div>
-        <div class="kpi-grid" id="kpi-grid"></div>
       </div>
 
-      <!-- Chart Section -->
+      <!-- TOFU -->
+      <div class="kpi-row" id="kpi-tofu">
+        <div class="kpi-row-header">
+          <span class="kpi-row-label tofu">TOFU</span>
+        </div>
+        <div class="kpi-grid" id="kpi-tofu-grid"></div>
+      </div>
+
+      <!-- MOFU -->
+      <div class="kpi-row" id="kpi-mofu">
+        <div class="kpi-row-header">
+          <span class="kpi-row-label mofu">MOFU</span>
+        </div>
+        <div class="kpi-grid" id="kpi-mofu-grid"></div>
+      </div>
+
+      <!-- BOFU -->
+      <div class="kpi-row" id="kpi-bofu">
+        <div class="kpi-row-header">
+          <span class="kpi-row-label bofu">BOFU</span>
+        </div>
+        <div class="kpi-grid" id="kpi-bofu-grid"></div>
+      </div>
+
+      <!-- Journey Timeline -->
       <div class="chart-section">
         <div class="chart-header">
           <h2>Journey Timeline</h2>
-          <div class="filter-row" id="chart-filters"></div>
         </div>
-        <div class="chart-container" id="chart-container"></div>
+        <div class="filter-section" id="chart-filters"></div>
+        <div class="chart-wrapper">
+          <div class="chart-y-axis" id="chart-y-axis" style="position:relative"></div>
+          <div class="chart-area" style="position:relative">
+            <div class="chart-gridlines" id="chart-gridlines"></div>
+            <div class="chart-container" id="chart-container"></div>
+          </div>
+        </div>
         <div class="chart-legend" id="chart-legend"></div>
         <div class="day-detail" id="day-detail">
           <div class="day-detail-header">
@@ -438,298 +242,551 @@
         </div>
       </div>
 
-      <!-- Contact Detail Section -->
+      <!-- Contact Section -->
       <div class="contact-section" id="contact-section">
-        <div class="contact-header">
-          <div class="contact-info">
-            <h2 id="contact-name">-</h2>
-            <div class="email" id="contact-email">-</div>
-            <div class="phone" id="contact-phone">-</div>
+        <div class="contact-sidebar">
+          <div class="search-box">
+            <input type="text" id="contact-search" placeholder="Search contacts..." oninput="onSearchInput(this.value)">
           </div>
-          <div style="display: flex; align-items: center; gap: 20px;">
-            <div class="contact-stats" id="contact-stats"></div>
-            <button class="close-btn" onclick="closeContactDetail()">&times;</button>
-          </div>
+          <div class="quick-filters" id="quick-filters"></div>
+          <div class="contact-list" id="contact-list"></div>
         </div>
-        <div class="contact-badges" id="contact-badges"></div>
-        <div class="contact-timeline" id="contact-timeline"></div>
+        <div class="contact-detail" id="contact-detail">
+          <div class="empty-state" style="padding:60px">Select a contact to view details</div>
+        </div>
       </div>
     </div>
   </div>
 
   <script>
     // =========================================================================
-    // SUPABASE CONNECTION
+    // SUPABASE
     // =========================================================================
-    // Set these environment variables before deploying
     const SUPABASE_URL = 'YOUR_SUPABASE_URL';
     const SUPABASE_KEY = 'YOUR_SUPABASE_ANON_KEY';
-
     const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     // =========================================================================
     // STATE
     // =========================================================================
     let contacts = [];
-    let kpiTimeframe = 30;
-    let chartDays = 30;
+    let timelineEvents = [];
+    let timeframe = 30; // days, 0 = all
     let selectedDay = null;
-    let selectedContact = null;
+    let selectedContactId = null;
+    let searchQuery = '';
+    let quickFilter = 'all';
 
-    const filters = {
-      quiz: true,
-      masterclass: true,
-      booked: true,
-      purchased: true,
-      new: true
+    const OR_FILTERS = {
+      new: { label: 'New Leads', color: '#667eea', on: true },
+      quiz: { label: 'Quiz Done', color: '#faf089', on: true },
+      masterclass: { label: 'Masterclass', color: '#d6bcfa', on: true },
+      form: { label: 'Completed Form', color: '#f6ad55', on: true },
+      booked: { label: 'Booked/Upcoming', color: '#ed8936', on: true },
+      tnc: { label: 'TNC', color: '#48bb78', on: true },
+      tnc_y2: { label: 'TNC Y2', color: '#38a169', on: true },
+      smd: { label: 'LTO SMD', color: '#4fd1c5', on: true },
+      rise: { label: 'LTO RISE', color: '#63b3ed', on: true },
+      bundle: { label: 'LTO Bundle', color: '#b794f4', on: true },
+      embodiment: { label: 'Embodiment', color: '#f687b3', on: true },
+      reschedule: { label: 'Reschedules', color: '#fbd38d', on: true },
+      noshow: { label: 'No Show', color: '#fc8181', on: true },
+      stop: { label: 'Stop/Unsub', color: '#e53e3e', on: true },
     };
 
-    const CATEGORIES = [
-      { key: 'new', label: 'New Contacts', color: '#bee3f8' },
-      { key: 'quiz', label: 'Quiz Taken', color: '#faf089' },
-      { key: 'masterclass', label: 'Masterclass', color: '#d6bcfa' },
-      { key: 'booked', label: 'Booked Call', color: '#ed8936' },
-      { key: 'purchased', label: 'Purchased', color: '#48bb78' }
-    ];
+    const AND_FILTERS = {
+      hasDeal: { label: 'Has Deal', on: false },
+      quizDone: { label: 'Quiz Done', on: false },
+      masterclass: { label: 'Masterclass', on: false },
+      hasBooking: { label: 'Has Booking', on: false },
+      fastLead: { label: 'Fast Lead (<24hr)', on: false },
+    };
+
+    // =========================================================================
+    // HELPERS
+    // =========================================================================
+    function getCutoff() {
+      if (timeframe === 0) return new Date(0);
+      return new Date(Date.now() - timeframe * 24 * 60 * 60 * 1000);
+    }
+
+    function filtered() {
+      const cutoff = getCutoff();
+      return contacts.filter(c => new Date(c.created_at) >= cutoff);
+    }
+
+    function fmt(n) { return n.toLocaleString(); }
+    function pct(n, d) { return d > 0 ? ((n / d) * 100).toFixed(1) + '%' : '0%'; }
 
     // =========================================================================
     // INIT
     // =========================================================================
     async function init() {
       try {
-        // Fetch all contacts with pagination (Supabase limits to 1000 per request)
+        // Fetch contacts
         let allContacts = [];
         let from = 0;
-        const pageSize = 1000;
-        let totalCount = 0;
-
         while (true) {
           const { data, error, count } = await db
             .from('contacts')
             .select('*', { count: 'exact' })
             .order('created_at', { ascending: false })
-            .range(from, from + pageSize - 1);
-
+            .range(from, from + 999);
           if (error) throw error;
           if (!data || data.length === 0) break;
-
           allContacts = allContacts.concat(data);
-          if (count) totalCount = count;
-
-          document.getElementById('sync-status').textContent = `Loading ${allContacts.length}/${totalCount}...`;
-
-          if (data.length < pageSize) break;
-          from += pageSize;
+          document.getElementById('sync-status').textContent = `Loading ${allContacts.length}...`;
+          if (data.length < 1000) break;
+          from += 1000;
         }
-
         contacts = allContacts;
+
+        // Fetch timeline events for KPI counts
+        let allTimeline = [];
+        from = 0;
+        while (true) {
+          const { data, error } = await db
+            .from('timeline_events')
+            .select('contact_id,category,event,timestamp')
+            .order('timestamp', { ascending: false })
+            .range(from, from + 999);
+          if (error) throw error;
+          if (!data || data.length === 0) break;
+          allTimeline = allTimeline.concat(data);
+          if (data.length < 1000) break;
+          from += 1000;
+        }
+        timelineEvents = allTimeline;
 
         document.getElementById('loading').style.display = 'none';
         document.getElementById('dashboard').style.display = 'block';
-        document.getElementById('sync-status').textContent = `${contacts.length} contacts`;
+        document.getElementById('sync-status').textContent = `${contacts.length} contacts | ${timelineEvents.length} events`;
 
-        renderKPIs();
-        renderChartFilters();
-        renderChart();
+        render();
       } catch (err) {
         console.error('Init error:', err);
-        document.getElementById('loading').textContent = 'Error loading data: ' + err.message;
+        document.getElementById('loading').textContent = 'Error: ' + err.message;
       }
+    }
+
+    function render() {
+      renderKPIs();
+      renderFilters();
+      renderChart();
+      renderContactSection();
+    }
+
+    // =========================================================================
+    // TIMEFRAME
+    // =========================================================================
+    function setTimeframe(days) {
+      timeframe = days;
+      document.querySelectorAll('.timeframe-pills .pill').forEach(p => {
+        const d = p.textContent === '7d' ? 7 : p.textContent === '30d' ? 30 : p.textContent === '90d' ? 90 : 0;
+        p.classList.toggle('active', d === days);
+      });
+      render();
     }
 
     // =========================================================================
     // KPIs
     // =========================================================================
-    function setKpiTimeframe(days) {
-      kpiTimeframe = days;
-      document.querySelectorAll('.kpi-section .pill').forEach(p => {
-        p.classList.toggle('active',
-          (days === 7 && p.textContent === '7 days') ||
-          (days === 30 && p.textContent === '30 days') ||
-          (days === 90 && p.textContent === '90 days') ||
-          (days === 0 && p.textContent === 'All time')
-        );
-      });
-      renderKPIs();
-    }
-
     function renderKPIs() {
-      const now = new Date();
-      const cutoff = kpiTimeframe > 0
-        ? new Date(now - kpiTimeframe * 24 * 60 * 60 * 1000)
-        : new Date(0);
+      const cutoff = getCutoff();
+      const fc = filtered();
+      const total = fc.length;
 
-      const filtered = contacts.filter(c => new Date(c.created_at) >= cutoff);
+      // Timeline events in timeframe
+      const tfEvents = timelineEvents.filter(e => new Date(e.timestamp) >= cutoff);
 
-      const total = filtered.length;
-      const quizTaken = filtered.filter(c => c.quiz_taken).length;
-      const masterclass = filtered.filter(c => c.masterclass_taken).length;
-      const smd = filtered.filter(c => c.smd_purchased).length;
-      const rise = filtered.filter(c => c.rise_purchased).length;
-      const bundle = filtered.filter(c => c.bundle_purchased).length;
-      const totalPurchased = filtered.filter(c => c.smd_purchased || c.rise_purchased || c.bundle_purchased).length;
-      const hasDiscoveryCall = filtered.filter(c => c.current_discovery_call).length;
+      // TOFU
+      const newContacts = fc.length;
+      const quizNew = fc.filter(c => c.quiz_taken).length;
+      const quizExisting = contacts.filter(c => c.quiz_taken && new Date(c.created_at) < cutoff).length;
+      const mcNew = fc.filter(c => c.masterclass_taken).length;
+      const mcExisting = contacts.filter(c => c.masterclass_taken && new Date(c.created_at) < cutoff).length;
 
-      const html = `
+      const outreachEvents = tfEvents.filter(e => ['EMAIL', 'SMS_OUTBOUND', 'CALL_OUTBOUND'].includes(e.category));
+      const totalOutreach = outreachEvents.length;
+      const uniqueOutreach = new Set(outreachEvents.map(e => e.contact_id)).size;
+
+      const responseEvents = tfEvents.filter(e => e.category === 'SMS_INBOUND');
+      const totalResponses = responseEvents.length;
+
+      const unsubContacts = fc.filter(c => {
+        // Check opt_in_status or we'd need tags — approximate for now
+        return c.opt_in_status && c.opt_in_status.toLowerCase().includes('unsub');
+      }).length;
+
+      document.getElementById('kpi-tofu-grid').innerHTML = `
         <div class="kpi-card">
-          <div class="label">Total Contacts</div>
-          <div class="value">${total.toLocaleString()}</div>
+          <div class="label">New Contacts</div>
+          <div class="value">${fmt(newContacts)}</div>
         </div>
-        <div class="kpi-card green">
+        <div class="kpi-card">
           <div class="label">Quiz Taken</div>
-          <div class="value">${quizTaken.toLocaleString()}</div>
-          <div class="change">${total > 0 ? ((quizTaken/total)*100).toFixed(1) : 0}%</div>
-        </div>
-        <div class="kpi-card purple">
-          <div class="label">Masterclass</div>
-          <div class="value">${masterclass.toLocaleString()}</div>
-          <div class="change">${total > 0 ? ((masterclass/total)*100).toFixed(1) : 0}%</div>
-        </div>
-        <div class="kpi-card orange">
-          <div class="label">Discovery Calls</div>
-          <div class="value">${hasDiscoveryCall.toLocaleString()}</div>
-        </div>
-        <div class="kpi-card blue">
-          <div class="label">Purchased</div>
-          <div class="value">${totalPurchased.toLocaleString()}</div>
-          <div class="change">${quizTaken > 0 ? ((totalPurchased/quizTaken)*100).toFixed(1) : 0}% of quiz</div>
+          <div class="value">${fmt(quizNew + quizExisting)}</div>
+          <div class="split">
+            <div class="split-item"><strong>${quizNew}</strong> new</div>
+            <div class="split-item"><strong>${quizExisting}</strong> existing</div>
+          </div>
         </div>
         <div class="kpi-card">
-          <div class="label">SMD / RISE / Bundle</div>
-          <div class="value">${smd} / ${rise} / ${bundle}</div>
+          <div class="label">Masterclass</div>
+          <div class="value">${fmt(mcNew + mcExisting)}</div>
+          <div class="split">
+            <div class="split-item"><strong>${mcNew}</strong> new</div>
+            <div class="split-item"><strong>${mcExisting}</strong> existing</div>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="label">Total Outreach</div>
+          <div class="value">${fmt(totalOutreach)}</div>
+          <div class="split">
+            <div class="split-item"><strong>${totalOutreach}</strong> total</div>
+            <div class="split-item"><strong>${uniqueOutreach}</strong> unique</div>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="label">Client Responses</div>
+          <div class="value">${fmt(totalResponses)}</div>
+        </div>
+        <div class="kpi-card">
+          <div class="label">Opt-Outs / Stops</div>
+          <div class="value">${fmt(unsubContacts)}</div>
+          <div class="sub">${pct(unsubContacts, total)}</div>
         </div>
       `;
 
-      document.getElementById('kpi-grid').innerHTML = html;
+      // MOFU (stubbed for Calendly)
+      const hasWhyNow = fc.filter(c => c.why_now).length;
+      const hasDiscovery = fc.filter(c => c.current_discovery_call).length;
+
+      document.getElementById('kpi-mofu-grid').innerHTML = `
+        <div class="kpi-card">
+          <div class="label">Completed Forms</div>
+          <div class="value">${fmt(hasWhyNow)}</div>
+          <div class="sub">has "why now"</div>
+        </div>
+        <div class="kpi-card">
+          <div class="label">Calls Booked</div>
+          <div class="value">${fmt(hasDiscovery)}</div>
+          <div class="sub">has discovery call</div>
+        </div>
+        <div class="kpi-card">
+          <div class="label">Reschedules</div>
+          <div class="value">--</div>
+          <div class="sub">needs Calendly</div>
+        </div>
+        <div class="kpi-card">
+          <div class="label">Follow-ups</div>
+          <div class="value">--</div>
+          <div class="sub">needs Calendly</div>
+        </div>
+        <div class="kpi-card">
+          <div class="label">No-Shows & Cancels</div>
+          <div class="value">--</div>
+          <div class="sub">needs Calendly</div>
+        </div>
+      `;
+
+      // BOFU
+      const tncPurchases = fc.filter(c => c.amount_paid && c.date_paid).length;
+      const tncRevenue = fc.reduce((sum, c) => {
+        if (!c.amount_paid) return sum;
+        const n = parseFloat(c.amount_paid.replace(/[^0-9.]/g, ''));
+        return sum + (isNaN(n) ? 0 : n);
+      }, 0);
+      const renewals = fc.filter(c => c.y2_amount_paid).length;
+      const embodiment = fc.filter(c => c.embodiment_amount_paid).length;
+      const smd = fc.filter(c => c.smd_purchased).length;
+      const rise = fc.filter(c => c.rise_purchased).length;
+      const bundle = fc.filter(c => c.bundle_purchased).length;
+
+      document.getElementById('kpi-bofu-grid').innerHTML = `
+        <div class="kpi-card">
+          <div class="label">TNC Purchases</div>
+          <div class="value">${fmt(tncPurchases)}</div>
+          <div class="sub">$${tncRevenue.toLocaleString()}</div>
+        </div>
+        <div class="kpi-card">
+          <div class="label">Renewals (Y2)</div>
+          <div class="value">${fmt(renewals)}</div>
+        </div>
+        <div class="kpi-card">
+          <div class="label">Embodiment</div>
+          <div class="value">${fmt(embodiment)}</div>
+        </div>
+        <div class="kpi-card">
+          <div class="label">SMD</div>
+          <div class="value">${fmt(smd)}</div>
+        </div>
+        <div class="kpi-card">
+          <div class="label">RISE</div>
+          <div class="value">${fmt(rise)}</div>
+        </div>
+        <div class="kpi-card">
+          <div class="label">Bundle</div>
+          <div class="value">${fmt(bundle)}</div>
+        </div>
+      `;
     }
+
+    // =========================================================================
+    // CHART FILTERS
+    // =========================================================================
+    function renderFilters() {
+      let html = '<div class="filter-group-label">Show (OR)</div>';
+      for (const [key, f] of Object.entries(OR_FILTERS)) {
+        html += `<button class="filter-pill ${f.on ? 'active' : ''}" onclick="toggleOr('${key}')">
+          <span class="dot" style="background:${f.color}"></span>${f.label}
+        </button>`;
+      }
+      html += '<div class="filter-group-label">Require (AND) — off by default</div>';
+      for (const [key, f] of Object.entries(AND_FILTERS)) {
+        html += `<button class="filter-pill ${f.on ? 'active' : ''}" onclick="toggleAnd('${key}')">${f.label}</button>`;
+      }
+      document.getElementById('chart-filters').innerHTML = html;
+
+      // Legend
+      const legendHtml = Object.entries(OR_FILTERS).map(([k, f]) =>
+        `<div class="legend-item"><span class="legend-dot" style="background:${f.color}"></span>${f.label}</div>`
+      ).join('');
+      document.getElementById('chart-legend').innerHTML = legendHtml;
+    }
+
+    function toggleOr(key) { OR_FILTERS[key].on = !OR_FILTERS[key].on; renderFilters(); renderChart(); }
+    function toggleAnd(key) { AND_FILTERS[key].on = !AND_FILTERS[key].on; renderFilters(); renderChart(); }
 
     // =========================================================================
     // CHART
     // =========================================================================
-    function renderChartFilters() {
-      const html = CATEGORIES.map(cat => `
-        <button class="filter-pill ${filters[cat.key] ? 'active' : ''}"
-                onclick="toggleFilter('${cat.key}')"
-                style="${filters[cat.key] ? '' : 'opacity: 0.5'}">
-          <span class="dot" style="background: ${cat.color}"></span>
-          ${cat.label}
-        </button>
-      `).join('');
-
-      document.getElementById('chart-filters').innerHTML = html;
-
-      // Legend
-      const legendHtml = CATEGORIES.map(cat => `
-        <div class="legend-item">
-          <span class="legend-dot" style="background: ${cat.color}"></span>
-          ${cat.label}
-        </div>
-      `).join('');
-      document.getElementById('chart-legend').innerHTML = legendHtml;
+    function classifyContact(c) {
+      const flags = new Set();
+      flags.add('new');
+      if (c.quiz_taken) flags.add('quiz');
+      if (c.masterclass_taken) flags.add('masterclass');
+      if (c.why_now) flags.add('form');
+      if (c.current_discovery_call) flags.add('booked');
+      if (c.amount_paid && c.date_paid) flags.add('tnc');
+      if (c.y2_amount_paid) flags.add('tnc_y2');
+      if (c.smd_purchased) flags.add('smd');
+      if (c.rise_purchased) flags.add('rise');
+      if (c.bundle_purchased) flags.add('bundle');
+      if (c.embodiment_amount_paid) flags.add('embodiment');
+      return flags;
     }
 
-    function toggleFilter(key) {
-      filters[key] = !filters[key];
-      renderChartFilters();
-      renderChart();
+    function passesAndFilters(c) {
+      if (AND_FILTERS.hasDeal.on && !c.current_discovery_call && !c.amount_paid) return false;
+      if (AND_FILTERS.quizDone.on && !c.quiz_taken) return false;
+      if (AND_FILTERS.masterclass.on && !c.masterclass_taken) return false;
+      if (AND_FILTERS.hasBooking.on && !c.current_discovery_call) return false;
+      if (AND_FILTERS.fastLead.on) {
+        // Fast lead: quiz or masterclass within 24hr of creation — approximate
+        return false; // TODO: needs timeline data
+      }
+      return true;
     }
 
     function renderChart() {
+      const numDays = timeframe || 90;
       const now = new Date();
       const days = [];
-
-      for (let i = chartDays - 1; i >= 0; i--) {
+      for (let i = numDays - 1; i >= 0; i--) {
         const d = new Date(now);
         d.setDate(d.getDate() - i);
         d.setHours(0, 0, 0, 0);
         days.push(d);
       }
 
-      // Build data per day
       const dayData = days.map(day => {
         const nextDay = new Date(day);
         nextDay.setDate(nextDay.getDate() + 1);
-
         const dayContacts = contacts.filter(c => {
           const created = new Date(c.created_at);
-          return created >= day && created < nextDay;
+          return created >= day && created < nextDay && passesAndFilters(c);
         });
 
-        return {
-          date: day,
-          new: dayContacts.length,
-          quiz: dayContacts.filter(c => c.quiz_taken).length,
-          masterclass: dayContacts.filter(c => c.masterclass_taken).length,
-          booked: dayContacts.filter(c => c.current_discovery_call).length,
-          purchased: dayContacts.filter(c => c.smd_purchased || c.rise_purchased || c.bundle_purchased).length,
-          contacts: dayContacts
-        };
+        const counts = {};
+        for (const key of Object.keys(OR_FILTERS)) counts[key] = 0;
+
+        for (const c of dayContacts) {
+          const flags = classifyContact(c);
+          for (const f of flags) {
+            if (counts[f] !== undefined) counts[f]++;
+          }
+        }
+
+        return { date: day, counts, contacts: dayContacts };
       });
 
-      // Find max for scaling
       const maxVal = Math.max(...dayData.map(d => {
         let sum = 0;
-        CATEGORIES.forEach(cat => {
-          if (filters[cat.key]) sum += d[cat.key];
-        });
+        for (const [key, f] of Object.entries(OR_FILTERS)) {
+          if (f.on) sum += d.counts[key] || 0;
+        }
         return sum;
       }), 1);
 
-      const html = dayData.map((d, i) => {
+      // Y-axis gridlines (minimum 3 lines)
+      const gridCount = Math.max(3, Math.min(5, maxVal));
+      const gridStep = maxVal / gridCount;
+      let yAxisHtml = '';
+      let gridlinesHtml = '';
+      for (let i = 0; i <= gridCount; i++) {
+        const val = Math.round(gridStep * i);
+        const pct = (i / gridCount) * 100;
+        yAxisHtml += `<div class="chart-y-label" style="position:absolute;bottom:calc(${pct}% + 20px)">${val}</div>`;
+        gridlinesHtml += `<div class="chart-gridline" style="bottom:calc(${pct}% + 20px)"></div>`;
+      }
+
+      const container = document.getElementById('chart-container');
+      const showEvery = numDays > 60 ? 7 : numDays > 30 ? 3 : 1;
+
+      // Update y-axis and gridlines
+      document.getElementById('chart-y-axis').innerHTML = yAxisHtml;
+      document.getElementById('chart-gridlines').innerHTML = gridlinesHtml;
+
+      container.innerHTML = dayData.map((d, i) => {
         const dateStr = d.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
         const isSelected = selectedDay && d.date.getTime() === selectedDay.getTime();
 
-        // Build stacked bars (bottom to top)
         let stackHtml = '';
-        CATEGORIES.slice().reverse().forEach(cat => {
-          if (filters[cat.key] && d[cat.key] > 0) {
-            const height = (d[cat.key] / maxVal) * 140;
-            stackHtml += `<div class="chart-bar ${cat.key}" style="height: ${height}px"></div>`;
+        const activeFilters = Object.entries(OR_FILTERS).filter(([k, f]) => f.on).reverse();
+        for (const [key, f] of activeFilters) {
+          const val = d.counts[key] || 0;
+          if (val > 0) {
+            const height = (val / maxVal) * 140;
+            stackHtml += `<div class="chart-bar" style="height:${height}px;background:${f.color}"></div>`;
           }
-        });
+        }
 
-        return `
-          <div class="chart-bar-group ${isSelected ? 'selected' : ''}" onclick="selectDay(${i})">
-            <div class="chart-bar-stack">${stackHtml}</div>
-            <div class="chart-bar-date">${i % 3 === 0 ? dateStr : ''}</div>
-          </div>
-        `;
+        return `<div class="chart-bar-group ${isSelected ? 'selected' : ''}"
+                     onclick="selectDay(${i})"
+                     onmouseenter="showTooltip(event,${i})"
+                     onmouseleave="hideTooltip()">
+          <div class="chart-bar-stack">${stackHtml}</div>
+          <div class="chart-bar-date">${i % showEvery === 0 ? dateStr : ''}</div>
+        </div>`;
       }).join('');
 
-      document.getElementById('chart-container').innerHTML = html;
-
-      // Store for click handling
       window._dayData = dayData;
+    }
+
+    // =========================================================================
+    // TOOLTIP
+    // =========================================================================
+    function showTooltip(event, index) {
+      const d = window._dayData[index];
+      const dateStr = d.date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+      const total = d.contacts.length;
+
+      let rows = `<div class="tt-row"><span>Total</span><span class="tt-val">${total}</span></div>`;
+      for (const [key, f] of Object.entries(OR_FILTERS)) {
+        const val = d.counts[key] || 0;
+        if (val > 0) {
+          rows += `<div class="tt-row"><span>${f.label}</span><span class="tt-val">${val}</span></div>`;
+        }
+      }
+
+      const tt = document.getElementById('chart-tooltip');
+      tt.innerHTML = `<div class="tt-date">${dateStr}</div>${rows}`;
+      tt.style.display = 'block';
+
+      const barGroup = event.target.closest('.chart-bar-group');
+      const rect = barGroup.getBoundingClientRect();
+      tt.style.left = (rect.left + rect.width / 2 - 80) + 'px';
+      tt.style.top = (rect.top - tt.offsetHeight - 8) + 'px';
+    }
+
+    function hideTooltip() {
+      document.getElementById('chart-tooltip').style.display = 'none';
+    }
+
+    // =========================================================================
+    // DAY DETAIL
+    // =========================================================================
+    // Engagement status: green (engaged), red (unsubbed/stopped), neutral
+    function getEngagementStatus(contactId) {
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      const events = timelineEvents.filter(e => e.contact_id === contactId);
+      const recentEvents = events.filter(e => new Date(e.timestamp) >= thirtyDaysAgo);
+
+      // Check for unsub/stop
+      const isUnsub = recentEvents.some(e =>
+        e.category === 'TAG' && e.details && /unsub|stop|opt.?out/i.test(e.details)
+      ) || recentEvents.some(e =>
+        e.category === 'SMS_INBOUND' && e.details && /^(stop|unsubscribe|cancel|quit|end)$/i.test(e.details.trim())
+      );
+      if (isUnsub) return 'red';
+
+      // Check for engagement back (email open/click or text response, excluding stop)
+      const hasEngagement = recentEvents.some(e =>
+        e.category === 'EMAIL' && (e.event === 'Email Opened' || e.event === 'Email Clicked')
+      ) || recentEvents.some(e =>
+        e.category === 'SMS_INBOUND' && e.details && !/^(stop|unsubscribe|cancel|quit|end)$/i.test(e.details.trim())
+      );
+      if (hasEngagement) return 'green';
+
+      return 'neutral';
+    }
+
+    // Lead time: days from created to first booking
+    function getLeadTime(c) {
+      if (!c.current_discovery_call || !c.created_at) return null;
+      const created = new Date(c.created_at);
+      const booked = new Date(c.current_discovery_call);
+      if (isNaN(booked.getTime())) return null;
+      const days = Math.round((booked - created) / (1000 * 60 * 60 * 24));
+      return days >= 0 ? days : null;
+    }
+
+    function formatLeadTime(days) {
+      if (days === null) return '';
+      if (days === 0) return '<1d';
+      return `${days}d`;
     }
 
     function selectDay(index) {
       const dayData = window._dayData[index];
       selectedDay = dayData.date;
-
       renderChart();
 
-      // Show day detail
       const dateStr = dayData.date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
       document.getElementById('day-detail-title').textContent = `${dateStr} (${dayData.contacts.length} contacts)`;
 
-      const contactsHtml = dayData.contacts.map(c => {
+      // Filter contacts by active OR filters
+      const visibleContacts = dayData.contacts.filter(c => {
+        const flags = classifyContact(c);
+        return [...flags].some(f => OR_FILTERS[f]?.on);
+      });
+
+      document.getElementById('day-contacts-grid').innerHTML = visibleContacts.map(c => {
         const badges = [];
         if (c.quiz_taken) badges.push('<span class="badge purple">Quiz</span>');
         if (c.masterclass_taken) badges.push('<span class="badge purple">MC</span>');
         if (c.current_discovery_call) badges.push('<span class="badge orange">Call</span>');
         if (c.smd_purchased || c.rise_purchased || c.bundle_purchased) badges.push('<span class="badge green">Purchased</span>');
+        if (c.amount_paid) badges.push('<span class="badge blue">TNC</span>');
 
-        return `
-          <div class="day-contact-card ${selectedContact?.id === c.id ? 'selected' : ''}"
-               onclick="selectContact('${c.id}')">
-            <div class="name">${c.first_name || ''} ${c.last_name || ''}</div>
-            <div class="email">${c.email || '-'}</div>
-            <div class="badges">${badges.join('')}</div>
-          </div>
-        `;
-      }).join('') || '<div class="empty-state">No contacts this day</div>';
+        const lt = getLeadTime(c);
+        if (lt !== null) badges.push(`<span class="badge" style="background:#667eea30;color:#667eea">${formatLeadTime(lt)} lead</span>`);
 
-      document.getElementById('day-contacts-grid').innerHTML = contactsHtml;
+        const engagement = getEngagementStatus(c.id);
+        const tint = engagement === 'green' ? 'border-color:#48bb7860;background:#48bb7810'
+                    : engagement === 'red' ? 'border-color:#e53e3e60;background:#e53e3e10'
+                    : '';
+
+        return `<div class="day-contact-card ${selectedContactId === c.id ? 'selected' : ''}"
+                     style="${tint}"
+                     onclick="selectContact('${c.id}')">
+          <div class="name">${c.first_name || ''} ${c.last_name || ''}</div>
+          <div class="email">${c.email || '-'}</div>
+          <div class="badges">${badges.join('')}</div>
+        </div>`;
+      }).join('') || '<div class="empty-state">No contacts match active filters</div>';
+
       document.getElementById('day-detail').classList.add('visible');
     }
 
@@ -740,165 +797,353 @@
     }
 
     // =========================================================================
-    // CONTACT DETAIL (now uses real timeline_events, tags, deals from Supabase)
+    // CONTACT SECTION
+    // =========================================================================
+    function renderContactSection() {
+      document.getElementById('contact-section').classList.add('visible');
+
+      // Quick filters
+      const qfs = [
+        { key: 'all', label: 'All' },
+        { key: 'hasDeal', label: 'Has Deal' },
+        { key: 'booked', label: 'Booked' },
+        { key: 'noshow', label: 'No Shows' },
+        { key: 'optout', label: 'Opt-Outs' },
+        { key: 'quiz', label: 'Quiz' },
+        { key: 'masterclass', label: 'Masterclass' },
+      ];
+      document.getElementById('quick-filters').innerHTML = qfs.map(f =>
+        `<button class="qf-pill ${quickFilter === f.key ? 'active' : ''}" onclick="setQuickFilter('${f.key}')">${f.label}</button>`
+      ).join('');
+
+      renderContactList();
+    }
+
+    function setQuickFilter(key) {
+      quickFilter = key;
+      renderContactSection();
+    }
+
+    function onSearchInput(val) {
+      searchQuery = val.toLowerCase();
+      renderContactList();
+    }
+
+    function renderContactList() {
+      let list = filtered();
+
+      // Search
+      if (searchQuery) {
+        list = contacts.filter(c => {
+          const name = `${c.first_name || ''} ${c.last_name || ''}`.toLowerCase();
+          const email = (c.email || '').toLowerCase();
+          return name.includes(searchQuery) || email.includes(searchQuery);
+        });
+      }
+
+      // Quick filter
+      if (quickFilter === 'hasDeal') list = list.filter(c => c.amount_paid || c.current_discovery_call);
+      else if (quickFilter === 'booked') list = list.filter(c => c.current_discovery_call);
+      else if (quickFilter === 'optout') list = list.filter(c => c.opt_in_status && c.opt_in_status.toLowerCase().includes('unsub'));
+      else if (quickFilter === 'quiz') list = list.filter(c => c.quiz_taken);
+      else if (quickFilter === 'masterclass') list = list.filter(c => c.masterclass_taken);
+
+      // Limit display
+      const display = list.slice(0, 100);
+
+      document.getElementById('contact-list').innerHTML = display.map(c => {
+        const badges = [];
+        if (c.quiz_taken) badges.push('<span class="badge purple">quiz</span>');
+        if (c.masterclass_taken) badges.push('<span class="badge purple">mc</span>');
+        if (c.amount_paid) badges.push('<span class="badge green">tnc</span>');
+        if (c.smd_purchased) badges.push('<span class="badge blue">smd</span>');
+
+        return `<div class="contact-list-card ${selectedContactId === c.id ? 'selected' : ''}"
+                     onclick="selectContact('${c.id}')">
+          <div class="cl-name">${c.first_name || ''} ${c.last_name || ''}</div>
+          <div class="cl-email">${c.email || '-'}</div>
+          <div class="cl-tags">${badges.join('')}</div>
+        </div>`;
+      }).join('') || '<div class="empty-state">No contacts found</div>';
+
+      if (list.length > 100) {
+        document.getElementById('contact-list').innerHTML += `<div class="empty-state">Showing 100 of ${list.length}</div>`;
+      }
+    }
+
+    // =========================================================================
+    // CONTACT DETAIL
     // =========================================================================
     async function selectContact(id) {
-      selectedContact = contacts.find(c => c.id === id);
-      if (!selectedContact) return;
+      selectedContactId = id;
+      const c = contacts.find(c => c.id === id);
+      if (!c) return;
 
-      // Re-render day contacts to show selection
-      if (selectedDay) {
-        const dayData = window._dayData.find(d => d.date.getTime() === selectedDay.getTime());
-        if (dayData) {
-          const contactsHtml = dayData.contacts.map(c => {
-            const badges = [];
-            if (c.quiz_taken) badges.push('<span class="badge purple">Quiz</span>');
-            if (c.masterclass_taken) badges.push('<span class="badge purple">MC</span>');
-            if (c.current_discovery_call) badges.push('<span class="badge orange">Call</span>');
-            if (c.smd_purchased || c.rise_purchased || c.bundle_purchased) badges.push('<span class="badge green">Purchased</span>');
+      renderContactList();
 
-            return `
-              <div class="day-contact-card ${c.id === id ? 'selected' : ''}"
-                   onclick="selectContact('${c.id}')">
-                <div class="name">${c.first_name || ''} ${c.last_name || ''}</div>
-                <div class="email">${c.email || '-'}</div>
-                <div class="badges">${badges.join('')}</div>
-              </div>
-            `;
-          }).join('');
-          document.getElementById('day-contacts-grid').innerHTML = contactsHtml;
-        }
-      }
+      const detail = document.getElementById('contact-detail');
+      detail.innerHTML = '<div class="loading">Loading contact data...</div>';
 
-      await renderContactDetail();
-    }
-
-    const CATEGORY_ICONS = {
-      'CONTACT': '&#128100;', 'TAG': '&#127991;', 'AUTOMATION': '&#9881;',
-      'EMAIL': '&#9993;', 'DEAL': '&#128176;', 'NOTE': '&#128221;',
-      'SMS_INBOUND': '&#128172;', 'SMS_OUTBOUND': '&#128172;',
-      'CALL_INBOUND': '&#128222;', 'CALL_OUTBOUND': '&#128222;',
-      'CALL_MISSED': '&#128222;', 'VOICEMAIL': '&#128223;',
-      'BOOKING': '&#128197;', 'STATE': '&#128260;', 'ACTIVITY': '&#9889;',
-    };
-
-    const CATEGORY_COLORS = {
-      'CONTACT': '#667eea', 'TAG': '#9f7aea', 'AUTOMATION': '#ed8936',
-      'EMAIL': '#4299e1', 'DEAL': '#48bb78', 'NOTE': '#718096',
-      'SMS_INBOUND': '#38b2ac', 'SMS_OUTBOUND': '#38b2ac',
-      'CALL_INBOUND': '#d69e2e', 'CALL_OUTBOUND': '#d69e2e',
-      'CALL_MISSED': '#e53e3e', 'VOICEMAIL': '#d69e2e',
-      'BOOKING': '#ed8936', 'STATE': '#718096', 'ACTIVITY': '#a0aec0',
-    };
-
-    async function renderContactDetail() {
-      const c = selectedContact;
-
-      document.getElementById('contact-name').textContent = `${c.first_name || ''} ${c.last_name || ''}`.trim() || 'Unknown';
-      document.getElementById('contact-email').textContent = c.email || '-';
-      document.getElementById('contact-phone').textContent = c.phone || '-';
-
-      // Fetch real data from new tables in parallel
-      const [timelineRes, tagsRes, dealsRes, automationsRes] = await Promise.all([
-        db.from('timeline_events').select('*').eq('contact_id', c.id).order('timestamp', { ascending: true }),
-        db.from('contact_tags').select('*').eq('contact_id', c.id),
-        db.from('contact_deals').select('*').eq('contact_id', c.id),
-        db.from('contact_automations').select('*').eq('contact_id', c.id),
+      // Fetch relational data
+      const [tlRes, tagsRes, dealsRes, autosRes] = await Promise.all([
+        db.from('timeline_events').select('*').eq('contact_id', id).order('timestamp', { ascending: true }),
+        db.from('contact_tags').select('*').eq('contact_id', id),
+        db.from('contact_deals').select('*').eq('contact_id', id),
+        db.from('contact_automations').select('*').eq('contact_id', id),
       ]);
 
-      const timelineEvents = timelineRes.data || [];
+      const tl = tlRes.data || [];
       const tags = tagsRes.data || [];
       const deals = dealsRes.data || [];
-      const automations = automationsRes.data || [];
+      const autos = autosRes.data || [];
 
-      // Stats
-      const emailCount = timelineEvents.filter(e => e.category === 'EMAIL').length;
-      const smsCount = timelineEvents.filter(e => e.category.startsWith('SMS')).length;
-      const callCount = timelineEvents.filter(e => e.category.startsWith('CALL') || e.category === 'VOICEMAIL').length;
+      const emailCount = tl.filter(e => e.category === 'EMAIL').length;
+      const smsCount = tl.filter(e => e.category.startsWith('SMS')).length;
+      const callCount = tl.filter(e => e.category.startsWith('CALL') || e.category === 'VOICEMAIL').length;
 
-      const statsHtml = `
-        <div class="contact-stat">
-          <div class="num">${c.amount_paid || '-'}</div>
-          <div class="lbl">Paid</div>
-        </div>
-        <div class="contact-stat">
-          <div class="num">${emailCount}</div>
-          <div class="lbl">Emails</div>
-        </div>
-        <div class="contact-stat">
-          <div class="num">${smsCount}</div>
-          <div class="lbl">SMS</div>
-        </div>
-        <div class="contact-stat">
-          <div class="num">${callCount}</div>
-          <div class="lbl">Calls</div>
-        </div>
-        <div class="contact-stat">
-          <div class="num">${timelineEvents.length}</div>
-          <div class="lbl">Events</div>
-        </div>
-      `;
-      document.getElementById('contact-stats').innerHTML = statsHtml;
+      const createdDate = c.created_at ? new Date(c.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '-';
 
-      // Badges — from contact fields + real tags + deals
-      const badges = [];
-      if (c.quiz_taken) badges.push('<span class="contact-badge purple">Quiz Taken</span>');
-      if (c.masterclass_taken) badges.push('<span class="contact-badge purple">Masterclass</span>');
-      if (c.smd_purchased) badges.push('<span class="contact-badge green">SMD</span>');
-      if (c.rise_purchased) badges.push('<span class="contact-badge green">RISE</span>');
-      if (c.bundle_purchased) badges.push('<span class="contact-badge green">Bundle</span>');
-      if (c.current_discovery_call) badges.push('<span class="contact-badge orange">Discovery Call</span>');
-      if (c.lead_source) badges.push(`<span class="contact-badge blue">Source: ${c.lead_source}</span>`);
-      if (c.setter) badges.push(`<span class="contact-badge">Setter: ${c.setter}</span>`);
-      if (c.closer) badges.push(`<span class="contact-badge">Closer: ${c.closer}</span>`);
+      const CAT_COLORS = {
+        CONTACT: '#667eea', TAG: '#9f7aea', AUTOMATION: '#ed8936', EMAIL: '#4299e1',
+        DEAL: '#48bb78', NOTE: '#718096', SMS_INBOUND: '#38b2ac', SMS_OUTBOUND: '#38b2ac',
+        CALL_INBOUND: '#d69e2e', CALL_OUTBOUND: '#d69e2e', CALL_MISSED: '#e53e3e',
+        VOICEMAIL: '#d69e2e', BOOKING: '#ed8936', STATE: '#718096', ACTIVITY: '#a0aec0',
+      };
+      const CAT_ICONS = {
+        CONTACT: '&#128100;', TAG: '&#127991;', AUTOMATION: '&#9881;', EMAIL: '&#9993;',
+        DEAL: '&#128176;', NOTE: '&#128221;', SMS_INBOUND: '&#128172;', SMS_OUTBOUND: '&#128172;',
+        CALL_INBOUND: '&#128222;', CALL_OUTBOUND: '&#128222;', CALL_MISSED: '&#128222;',
+        VOICEMAIL: '&#128223;', BOOKING: '&#128197;', STATE: '&#128260;', ACTIVITY: '&#9889;',
+      };
 
-      // Active tags
-      for (const tag of tags) {
-        badges.push(`<span class="contact-badge" style="background:#e2e8f0">${tag.tag_name}</span>`);
-      }
+      const badgesHtml = [
+        c.quiz_taken ? '<span class="badge purple">Quiz Taken</span>' : '',
+        c.masterclass_taken ? '<span class="badge purple">Masterclass</span>' : '',
+        c.smd_purchased ? '<span class="badge green">SMD</span>' : '',
+        c.rise_purchased ? '<span class="badge green">RISE</span>' : '',
+        c.bundle_purchased ? '<span class="badge green">Bundle</span>' : '',
+        c.current_discovery_call ? '<span class="badge orange">Discovery Call</span>' : '',
+        c.lead_source ? `<span class="badge blue">Source: ${c.lead_source}</span>` : '',
+        c.setter ? `<span class="badge">Setter: ${c.setter}</span>` : '',
+        c.closer ? `<span class="badge">Closer: ${c.closer}</span>` : '',
+        ...tags.map(t => `<span class="badge">${t.tag_name}</span>`),
+        ...deals.map(d => {
+          const color = d.status === 'Won' ? 'green' : d.status === 'Lost' ? 'red' : 'orange';
+          const val = d.value_cents ? ` $${(d.value_cents / 100).toLocaleString()}` : '';
+          return `<span class="badge ${color}">${d.title}${val} (${d.status})</span>`;
+        }),
+        ...autos.filter(a => a.status === 'Active').map(a => `<span class="badge orange">${a.automation_name}</span>`),
+      ].filter(Boolean).join('');
 
-      // Open deals
-      for (const deal of deals) {
-        const color = deal.status === 'Won' ? '#c6f6d5' : deal.status === 'Lost' ? '#fed7d7' : '#feebc8';
-        const value = deal.value_cents ? `$${(deal.value_cents / 100).toLocaleString()}` : '';
-        badges.push(`<span class="contact-badge" style="background:${color}">${deal.title} ${value} (${deal.status})</span>`);
-      }
-
-      // Active automations
-      for (const auto of automations.filter(a => a.status === 'Active')) {
-        badges.push(`<span class="contact-badge" style="background:#feebc8">${auto.automation_name}</span>`);
-      }
-
-      document.getElementById('contact-badges').innerHTML = badges.join('') || '<span class="contact-badge">No data</span>';
-
-      // Real timeline from timeline_events table
-      const timelineHtml = timelineEvents.map(t => {
-        const icon = CATEGORY_ICONS[t.category] || '&#9889;';
-        const color = CATEGORY_COLORS[t.category] || '#a0aec0';
+      _currentTimelineEvents = tl;
+      const tlHtml = tl.map(t => {
+        const color = CAT_COLORS[t.category] || '#a0aec0';
+        const icon = CAT_ICONS[t.category] || '&#9889;';
         const time = new Date(t.timestamp);
         const timeStr = time.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
-
-        return `
-          <div class="timeline-item">
-            <div class="timeline-icon" style="background: ${color}20; color: ${color}; border-color: ${color}">
-              ${icon}
-            </div>
-            <div class="timeline-content">
-              <div class="event">${t.event}</div>
-              ${t.details ? `<div class="details">${t.details}</div>` : ''}
-              <div class="time">${timeStr} <span style="color:#aaa;font-size:10px">${t.source || ''}</span></div>
-            </div>
+        return `<div class="tl-item">
+          <div class="tl-icon" style="background:${color}20;color:${color}">${icon}</div>
+          <div class="tl-content">
+            <div class="tl-event">${t.event}</div>
+            ${t.details ? `<div class="tl-details">${t.details}</div>` : ''}
+            <div class="tl-time">${timeStr}</div>
           </div>
-        `;
-      }).join('') || '<div class="empty-state">No timeline events synced for this contact</div>';
+        </div>`;
+      }).join('') || '<div class="empty-state">No timeline events</div>';
 
-      document.getElementById('contact-timeline').innerHTML = timelineHtml;
-      document.getElementById('contact-section').classList.add('visible');
+      detail.innerHTML = `
+        <div class="cd-header">
+          <div class="cd-name">${c.first_name || ''} ${c.last_name || ''}</div>
+          <div class="cd-email">${c.email || '-'}</div>
+          <div class="cd-phone">${c.phone || '-'} &middot; Created ${createdDate}</div>
+        </div>
+        <div class="cd-profile">
+          <div class="cd-field"><div class="cd-label">Entry Date</div><div class="cd-val">${createdDate}</div></div>
+          <div class="cd-field"><div class="cd-label">Country</div><div class="cd-val">${c.country || '-'}</div></div>
+          <div class="cd-field"><div class="cd-label">Lead Source</div><div class="cd-val">${c.lead_source || '-'}</div></div>
+          <div class="cd-field"><div class="cd-label">Quiz</div><div class="cd-val">${c.quiz_taken ? 'Taken' : '-'}</div></div>
+          <div class="cd-field"><div class="cd-label">Masterclass</div><div class="cd-val">${c.masterclass_taken ? 'Taken' : '-'}</div></div>
+          <div class="cd-field"><div class="cd-label">Amount Paid</div><div class="cd-val">${c.amount_paid || '-'}</div></div>
+          <div class="cd-field"><div class="cd-label">Lead Time</div><div class="cd-val">${getLeadTime(c) !== null ? formatLeadTime(getLeadTime(c)) : 'No booking'}</div></div>
+          <div class="cd-field"><div class="cd-label">Setter</div><div class="cd-val">${c.setter || '-'}</div></div>
+          <div class="cd-field"><div class="cd-label">Closer</div><div class="cd-val">${c.closer || '-'}</div></div>
+        </div>
+        <div class="cd-badges">${badgesHtml || '<span class="badge">No tags</span>'}</div>
+        <div class="cd-stats">
+          <div class="cd-stat"><div class="num">${tags.length}</div><div class="lbl">Tags</div></div>
+          <div class="cd-stat"><div class="num">${autos.length}</div><div class="lbl">Automations</div></div>
+          <div class="cd-stat"><div class="num">${deals.length}</div><div class="lbl">Deals</div></div>
+          <div class="cd-stat"><div class="num">${callCount}</div><div class="lbl">Calls</div></div>
+          <div class="cd-stat"><div class="num">${smsCount}</div><div class="lbl">SMS</div></div>
+          <div class="cd-stat"><div class="num">${tl.length}</div><div class="lbl">Total</div></div>
+        </div>
+        ${buildActivityChart(tl)}
+        <div class="cd-tags-section">
+          <h4>Tags</h4>
+          ${tags.length ? tags.map(t => `<span class="badge">${t.tag_name}</span>`).join(' ') : '<span class="empty-state">No tags</span>'}
+        </div>
+        <div class="cd-deals-section">
+          <h4>Deals</h4>
+          ${deals.length ? deals.map(d => {
+            const color = d.status === 'Won' ? 'green' : d.status === 'Lost' ? 'red' : 'orange';
+            const val = d.value_cents ? ` $${(d.value_cents / 100).toLocaleString()}` : '';
+            return `<span class="badge ${color}">${d.title} (${d.pipeline} &rarr; ${d.stage} - ${d.status})${val}</span>`;
+          }).join(' ') : '<span class="empty-state">No deals</span>'}
+        </div>
+        <div class="cd-timeline">
+          <h3>Timeline (${tl.length} events)</h3>
+          <div class="tl-filters">
+            <button class="qf-pill active" onclick="filterTimeline('all',this)">All</button>
+            <button class="qf-pill" onclick="filterTimeline('TAG',this)">Tags</button>
+            <button class="qf-pill" onclick="filterTimeline('AUTOMATION',this)">Automations</button>
+            <button class="qf-pill" onclick="filterTimeline('SMS',this)">SMS</button>
+            <button class="qf-pill" onclick="filterTimeline('CALL',this)">Calls</button>
+            <button class="qf-pill" onclick="filterTimeline('EMAIL',this)">Email</button>
+            <button class="qf-pill" onclick="filterTimeline('DEAL',this)">Deals</button>
+            <button class="qf-pill" onclick="filterTimeline('NOTE',this)">Notes</button>
+          </div>
+          <div id="timeline-items">${tlHtml}</div>
+        </div>
+      `;
     }
 
-    function closeContactDetail() {
-      selectedContact = null;
-      document.getElementById('contact-section').classList.remove('visible');
+    // =========================================================================
+    // CONTACT ACTIVITY CHART
+    // =========================================================================
+    const ACTIVITY_CATS = [
+      { key: 'Email', match: c => c === 'EMAIL', color: '#63b3ed' },
+      { key: 'SMS', match: c => c.startsWith('SMS'), color: '#bee3f8' },
+      { key: 'Calls', match: c => c.startsWith('CALL') || c === 'VOICEMAIL', color: '#c6f6d5' },
+      { key: 'Tags', match: c => c === 'TAG', color: '#faf089' },
+      { key: 'Automations', match: c => c === 'AUTOMATION', color: '#d6bcfa' },
+      { key: 'Deals/Notes', match: c => c === 'DEAL' || c === 'NOTE' || c === 'BOOKING', color: '#fbd38d' },
+      { key: 'Stop/Unsub', match: c => c === 'STOP', color: '#fc8181' },
+    ];
+
+    function buildActivityChart(events) {
+      if (!events.length) return '<div class="cd-activity"><h3>Activity Over Time</h3><div class="empty-state">No activity data</div></div>';
+
+      // Dynamic date range: from first event to now (min 14 days, max 90)
+      const timestamps = events.map(e => new Date(e.timestamp).getTime()).filter(t => !isNaN(t));
+      const earliest = new Date(Math.min(...timestamps));
+      const now = new Date();
+      const daySpan = Math.ceil((now - earliest) / (1000 * 60 * 60 * 24));
+      const numDays = Math.max(14, Math.min(90, daySpan + 1));
+
+      const days = [];
+      for (let i = numDays - 1; i >= 0; i--) {
+        const d = new Date(now);
+        d.setDate(d.getDate() - i);
+        d.setHours(0, 0, 0, 0);
+        days.push(d);
+      }
+
+      const dayBuckets = days.map(day => {
+        const nextDay = new Date(day);
+        nextDay.setDate(nextDay.getDate() + 1);
+        const dayEvents = events.filter(e => {
+          const t = new Date(e.timestamp);
+          return t >= day && t < nextDay;
+        });
+        const counts = {};
+        ACTIVITY_CATS.forEach(cat => {
+          counts[cat.key] = dayEvents.filter(e => cat.match(e.category)).length;
+        });
+        return { date: day, counts };
+      });
+
+      const maxVal = Math.max(...dayBuckets.map(d => {
+        return Object.values(d.counts).reduce((s, v) => s + v, 0);
+      }), 1);
+
+      const gridCount = Math.max(3, Math.min(4, maxVal));
+      let gridHtml = '';
+      let yLabels = '';
+      for (let i = 0; i <= gridCount; i++) {
+        const val = Math.round((maxVal / gridCount) * i);
+        const pct = (i / gridCount) * 100;
+        gridHtml += `<div class="cd-mini-gridline" style="bottom:${pct}%"></div>`;
+        yLabels += `<span style="position:absolute;bottom:${pct}%;right:4px;font-size:8px;color:#5a6178">${val}</span>`;
+      }
+
+      const chartHeight = 70;
+      const barsHtml = dayBuckets.map((d, i) => {
+        const dateStr = d.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        let stack = '';
+        ACTIVITY_CATS.slice().reverse().forEach(cat => {
+          const val = d.counts[cat.key] || 0;
+          if (val > 0) {
+            const h = Math.max(2, (val / maxVal) * chartHeight);
+            stack += `<div style="width:100%;height:${h}px;background:${cat.color};border-radius:1px"></div>`;
+          }
+        });
+        return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:${chartHeight + 16}px">
+          <div style="width:100%;display:flex;flex-direction:column;justify-content:flex-end;height:${chartHeight}px">${stack}</div>
+          ${i % 5 === 0 ? `<div style="font-size:8px;color:#5a6178;margin-top:4px">${dateStr}</div>` : '<div style="height:12px"></div>'}
+        </div>`;
+      }).join('');
+
+      const legendHtml = ACTIVITY_CATS.map(cat =>
+        `<div class="legend-item"><span class="legend-dot" style="background:${cat.color}"></span>${cat.key}</div>`
+      ).join('');
+
+      return `<div class="cd-activity">
+        <h3>Activity Over Time</h3>
+        <div style="display:flex;gap:4px;position:relative">
+          <div style="width:25px;position:relative;height:${chartHeight}px">${yLabels}</div>
+          <div style="flex:1;position:relative;height:${chartHeight + 16}px">
+            <div style="position:absolute;top:0;left:0;right:0;height:${chartHeight}px;pointer-events:none">${gridHtml}</div>
+            <div style="display:flex;gap:2px;height:${chartHeight + 16}px;align-items:flex-end">${barsHtml}</div>
+          </div>
+        </div>
+        <div class="cd-mini-legend">${legendHtml}</div>
+      </div>`;
+    }
+
+    // =========================================================================
+    // TIMELINE FILTER
+    // =========================================================================
+    let _currentTimelineEvents = [];
+
+    function filterTimeline(category, btn) {
+      // Update active state
+      btn.closest('.tl-filters').querySelectorAll('.qf-pill').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+
+      const container = document.getElementById('timeline-items');
+      if (!container) return;
+
+      const CAT_COLORS = {
+        CONTACT: '#667eea', TAG: '#9f7aea', AUTOMATION: '#ed8936', EMAIL: '#4299e1',
+        DEAL: '#48bb78', NOTE: '#718096', SMS_INBOUND: '#38b2ac', SMS_OUTBOUND: '#38b2ac',
+        CALL_INBOUND: '#d69e2e', CALL_OUTBOUND: '#d69e2e', CALL_MISSED: '#e53e3e',
+        VOICEMAIL: '#d69e2e', BOOKING: '#ed8936', STATE: '#718096', ACTIVITY: '#a0aec0',
+      };
+      const CAT_ICONS = {
+        CONTACT: '&#128100;', TAG: '&#127991;', AUTOMATION: '&#9881;', EMAIL: '&#9993;',
+        DEAL: '&#128176;', NOTE: '&#128221;', SMS_INBOUND: '&#128172;', SMS_OUTBOUND: '&#128172;',
+        CALL_INBOUND: '&#128222;', CALL_OUTBOUND: '&#128222;', CALL_MISSED: '&#128222;',
+        VOICEMAIL: '&#128223;', BOOKING: '&#128197;', STATE: '&#128260;', ACTIVITY: '&#9889;',
+      };
+
+      const filtered = category === 'all'
+        ? _currentTimelineEvents
+        : _currentTimelineEvents.filter(t => t.category.startsWith(category));
+
+      container.innerHTML = filtered.map(t => {
+        const color = CAT_COLORS[t.category] || '#a0aec0';
+        const icon = CAT_ICONS[t.category] || '&#9889;';
+        const time = new Date(t.timestamp);
+        const timeStr = time.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+        return `<div class="tl-item">
+          <div class="tl-icon" style="background:${color}20;color:${color}">${icon}</div>
+          <div class="tl-content">
+            <div class="tl-event">${t.event}</div>
+            ${t.details ? `<div class="tl-details">${t.details}</div>` : ''}
+            <div class="tl-time">${timeStr}</div>
+          </div>
+        </div>`;
+      }).join('') || '<div class="empty-state">No events in this category</div>';
     }
 
     // =========================================================================

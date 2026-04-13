@@ -1,4 +1,4 @@
-name: Sync AC Data
+name: Sync All Data
 
 on:
   workflow_dispatch:
@@ -10,15 +10,17 @@ on:
         type: choice
         options:
           - test          # 5 contacts — for verification
-          - days          # Contacts created in last N days
+          - days          # Contacts created in last N days + Calendly + JustCall
           - fix-fields    # Re-fetch field values only (fast)
           - dump-fields   # List all AC field definitions (IDs)
+          - calendly-only # Only sync Calendly
+          - justcall-only # Only sync JustCall
           - incremental   # Only contacts updated since last sync
           - full          # All contacts (slow, hours)
       days:
-        description: 'Number of days (days mode only)'
+        description: 'Number of days'
         required: false
-        default: '7'
+        default: '30'
       limit:
         description: 'Max contacts (test/full mode only)'
         required: false
@@ -33,7 +35,7 @@ on:
 jobs:
   sync:
     runs-on: ubuntu-latest
-    timeout-minutes: 360  # 6 hour max for full syncs
+    timeout-minutes: 360
 
     steps:
       - uses: actions/checkout@v4
@@ -52,41 +54,113 @@ jobs:
           MODE="${{ github.event.inputs.mode || 'incremental' }}"
           CONTACT="${{ github.event.inputs.contact_id }}"
           LIMIT="${{ github.event.inputs.limit || '5' }}"
-          DAYS="${{ github.event.inputs.days || '7' }}"
+          DAYS="${{ github.event.inputs.days || '30' }}"
 
+          # AC sync command
           if [ -n "$CONTACT" ]; then
-            echo "script=sync-full.js --contact $CONTACT" >> $GITHUB_OUTPUT
+            echo "ac_script=sync-full.js --contact $CONTACT" >> $GITHUB_OUTPUT
             echo "desc=Single contact $CONTACT" >> $GITHUB_OUTPUT
+            echo "run_ac=true" >> $GITHUB_OUTPUT
+            echo "run_calendly=true" >> $GITHUB_OUTPUT
+            echo "run_justcall=true" >> $GITHUB_OUTPUT
           elif [ "$MODE" = "test" ]; then
-            echo "script=sync-full.js --limit $LIMIT" >> $GITHUB_OUTPUT
+            echo "ac_script=sync-full.js --limit $LIMIT" >> $GITHUB_OUTPUT
             echo "desc=Test sync ($LIMIT contacts)" >> $GITHUB_OUTPUT
+            echo "run_ac=true" >> $GITHUB_OUTPUT
+            echo "run_calendly=false" >> $GITHUB_OUTPUT
+            echo "run_justcall=false" >> $GITHUB_OUTPUT
           elif [ "$MODE" = "days" ]; then
-            echo "script=sync-full.js --days $DAYS" >> $GITHUB_OUTPUT
-            echo "desc=Sync last $DAYS days" >> $GITHUB_OUTPUT
+            echo "ac_script=sync-full.js --days $DAYS" >> $GITHUB_OUTPUT
+            echo "desc=Sync last $DAYS days (AC + Calendly + JustCall)" >> $GITHUB_OUTPUT
+            echo "run_ac=true" >> $GITHUB_OUTPUT
+            echo "run_calendly=true" >> $GITHUB_OUTPUT
+            echo "run_justcall=true" >> $GITHUB_OUTPUT
           elif [ "$MODE" = "dump-fields" ]; then
-            echo "script=dump-fields.js" >> $GITHUB_OUTPUT
+            echo "ac_script=dump-fields.js" >> $GITHUB_OUTPUT
             echo "desc=Dump AC field definitions" >> $GITHUB_OUTPUT
+            echo "run_ac=true" >> $GITHUB_OUTPUT
+            echo "run_calendly=false" >> $GITHUB_OUTPUT
+            echo "run_justcall=false" >> $GITHUB_OUTPUT
           elif [ "$MODE" = "fix-fields" ]; then
-            echo "script=fix-field-values.js --days $DAYS" >> $GITHUB_OUTPUT
+            echo "ac_script=fix-field-values.js --days $DAYS" >> $GITHUB_OUTPUT
             echo "desc=Fix field values (last $DAYS days)" >> $GITHUB_OUTPUT
+            echo "run_ac=true" >> $GITHUB_OUTPUT
+            echo "run_calendly=false" >> $GITHUB_OUTPUT
+            echo "run_justcall=false" >> $GITHUB_OUTPUT
+          elif [ "$MODE" = "calendly-only" ]; then
+            echo "ac_script=echo 'Skipping AC'" >> $GITHUB_OUTPUT
+            echo "desc=Calendly only (last $DAYS days)" >> $GITHUB_OUTPUT
+            echo "run_ac=false" >> $GITHUB_OUTPUT
+            echo "run_calendly=true" >> $GITHUB_OUTPUT
+            echo "run_justcall=false" >> $GITHUB_OUTPUT
+          elif [ "$MODE" = "justcall-only" ]; then
+            echo "ac_script=echo 'Skipping AC'" >> $GITHUB_OUTPUT
+            echo "desc=JustCall only (last $DAYS days)" >> $GITHUB_OUTPUT
+            echo "run_ac=false" >> $GITHUB_OUTPUT
+            echo "run_calendly=false" >> $GITHUB_OUTPUT
+            echo "run_justcall=true" >> $GITHUB_OUTPUT
           elif [ "$MODE" = "full" ]; then
             if [ -n "$LIMIT" ] && [ "$LIMIT" != "5" ]; then
-              echo "script=sync-full.js --limit $LIMIT" >> $GITHUB_OUTPUT
+              echo "ac_script=sync-full.js --limit $LIMIT" >> $GITHUB_OUTPUT
               echo "desc=Full sync (limit $LIMIT)" >> $GITHUB_OUTPUT
             else
-              echo "script=sync-full.js" >> $GITHUB_OUTPUT
-              echo "desc=Full sync (all contacts)" >> $GITHUB_OUTPUT
+              echo "ac_script=sync-full.js" >> $GITHUB_OUTPUT
+              echo "desc=Full sync (all contacts + Calendly + JustCall)" >> $GITHUB_OUTPUT
             fi
+            echo "run_ac=true" >> $GITHUB_OUTPUT
+            echo "run_calendly=true" >> $GITHUB_OUTPUT
+            echo "run_justcall=true" >> $GITHUB_OUTPUT
           else
-            echo "script=sync-incremental-full.js" >> $GITHUB_OUTPUT
+            echo "ac_script=sync-incremental-full.js" >> $GITHUB_OUTPUT
             echo "desc=Incremental sync" >> $GITHUB_OUTPUT
+            echo "run_ac=true" >> $GITHUB_OUTPUT
+            echo "run_calendly=false" >> $GITHUB_OUTPUT
+            echo "run_justcall=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Run sync — ${{ steps.cmd.outputs.desc }}
+          echo "days=$DAYS" >> $GITHUB_OUTPUT
+
+      - name: "AC Sync — ${{ steps.cmd.outputs.desc }}"
+        if: steps.cmd.outputs.run_ac == 'true'
         working-directory: scripts
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
           AC_KEY: ${{ secrets.AC_KEY }}
           AC_BASE: ${{ secrets.AC_BASE }}
-        run: node ${{ steps.cmd.outputs.script }}
+        run: node ${{ steps.cmd.outputs.ac_script }}
+
+      - name: "Calendly Sync (last ${{ steps.cmd.outputs.days }} days)"
+        if: steps.cmd.outputs.run_calendly == 'true'
+        working-directory: scripts
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          CALENDLY_KEY: ${{ secrets.CALENDLY_KEY }}
+        run: node sync-calendly.js --days ${{ steps.cmd.outputs.days }}
+
+      - name: "JustCall Sync (last ${{ steps.cmd.outputs.days }} days)"
+        if: steps.cmd.outputs.run_justcall == 'true'
+        working-directory: scripts
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          JUSTCALL_API_KEY: ${{ secrets.JUSTCALL_API_KEY }}
+          JUSTCALL_API_SECRET: ${{ secrets.JUSTCALL_API_SECRET }}
+        run: node sync-justcall.js --days ${{ steps.cmd.outputs.days }}
+
+      - name: "Fix field values (last ${{ steps.cmd.outputs.days }} days)"
+        if: steps.cmd.outputs.run_ac == 'true' && steps.cmd.outputs.run_ac != 'false'
+        working-directory: scripts
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          AC_KEY: ${{ secrets.AC_KEY }}
+          AC_BASE: ${{ secrets.AC_BASE }}
+        run: |
+          if [ "${{ github.event.inputs.mode }}" = "days" ] || [ "${{ github.event.inputs.mode }}" = "full" ]; then
+            echo "Running fix-field-values..."
+            node fix-field-values.js --days ${{ steps.cmd.outputs.days }}
+          else
+            echo "Skipping fix-fields for this mode"
+          fi

@@ -36,13 +36,6 @@ async function run() {
   try {
     await client.query(sql);
     console.log('Migration completed successfully.');
-  } catch (err) {
-    // IF NOT EXISTS means some errors are expected on re-run
-    if (err.message.includes('already exists')) {
-      console.log('Tables already exist — migration skipped (idempotent).');
-    } else {
-      throw err;
-    }
   } finally {
     await client.end();
   }

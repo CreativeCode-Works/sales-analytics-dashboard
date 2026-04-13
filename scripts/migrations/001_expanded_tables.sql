@@ -1,80 +1,91 @@
 -- Migration: Add tables for notes, tags, automations, deals, activities, and timeline events
--- Run this in Supabase SQL Editor (Dashboard → SQL Editor → New Query)
+-- Fully idempotent — safe to re-run
 
 -- ============================================================================
--- CONTACT NOTES (raw notes from AC — source for JustCall SMS/call parsing)
+-- Drop and recreate all new tables (clean slate for migration reruns)
+-- Only drops tables we're creating — never touches 'contacts' or 'sync_log'
 -- ============================================================================
-CREATE TABLE IF NOT EXISTS contact_notes (
-  id TEXT PRIMARY KEY,                    -- AC note ID
+DROP TABLE IF EXISTS timeline_events CASCADE;
+DROP TABLE IF EXISTS contact_activities CASCADE;
+DROP TABLE IF EXISTS contact_deals CASCADE;
+DROP TABLE IF EXISTS contact_automations CASCADE;
+DROP TABLE IF EXISTS contact_tags CASCADE;
+DROP TABLE IF EXISTS contact_notes CASCADE;
+DROP TABLE IF EXISTS tag_lookup CASCADE;
+DROP TABLE IF EXISTS automation_lookup CASCADE;
+DROP TABLE IF EXISTS deal_stage_lookup CASCADE;
+DROP TABLE IF EXISTS deal_pipeline_lookup CASCADE;
+
+-- ============================================================================
+-- CONTACT NOTES
+-- ============================================================================
+CREATE TABLE contact_notes (
+  id TEXT PRIMARY KEY,
   contact_id TEXT NOT NULL REFERENCES contacts(id),
-  rel_type TEXT NOT NULL DEFAULT 'Subscriber',  -- 'Subscriber' or 'Deal'
-  rel_id TEXT,                            -- deal_id if rel_type='Deal'
+  rel_type TEXT NOT NULL DEFAULT 'Subscriber',
+  rel_id TEXT,
   content TEXT,
   created_at TIMESTAMPTZ,
   synced_at TIMESTAMPTZ DEFAULT NOW()
 );
-
 CREATE INDEX idx_contact_notes_contact ON contact_notes(contact_id);
 CREATE INDEX idx_contact_notes_rel ON contact_notes(rel_type, rel_id);
 
 -- ============================================================================
--- CONTACT TAGS (current tags with add dates)
+-- CONTACT TAGS
 -- ============================================================================
-CREATE TABLE IF NOT EXISTS contact_tags (
-  id TEXT PRIMARY KEY,                    -- AC contactTag ID
+CREATE TABLE contact_tags (
+  id TEXT PRIMARY KEY,
   contact_id TEXT NOT NULL REFERENCES contacts(id),
   tag_id TEXT NOT NULL,
   tag_name TEXT,
   added_at TIMESTAMPTZ,
   synced_at TIMESTAMPTZ DEFAULT NOW()
 );
-
 CREATE INDEX idx_contact_tags_contact ON contact_tags(contact_id);
 CREATE INDEX idx_contact_tags_name ON contact_tags(tag_name);
 
 -- ============================================================================
--- CONTACT AUTOMATIONS (automation enrollments with status)
+-- CONTACT AUTOMATIONS
 -- ============================================================================
-CREATE TABLE IF NOT EXISTS contact_automations (
-  id TEXT PRIMARY KEY,                    -- AC contactAutomation ID
+CREATE TABLE contact_automations (
+  id TEXT PRIMARY KEY,
   contact_id TEXT NOT NULL REFERENCES contacts(id),
   automation_id TEXT NOT NULL,
   automation_name TEXT,
-  status TEXT,                            -- 'Active', 'Completed', 'Stopped'
+  status TEXT,
   entered_at TIMESTAMPTZ,
   completed_at TIMESTAMPTZ,
   synced_at TIMESTAMPTZ DEFAULT NOW()
 );
-
 CREATE INDEX idx_contact_automations_contact ON contact_automations(contact_id);
 CREATE INDEX idx_contact_automations_status ON contact_automations(status);
 
 -- ============================================================================
--- CONTACT DEALS (deals with pipeline, stage, value)
+-- CONTACT DEALS
 -- ============================================================================
-CREATE TABLE IF NOT EXISTS contact_deals (
-  id TEXT PRIMARY KEY,                    -- AC deal ID
+CREATE TABLE contact_deals (
+  id TEXT PRIMARY KEY,
   contact_id TEXT NOT NULL REFERENCES contacts(id),
   title TEXT,
-  value_cents INTEGER,                    -- deal value in cents
+  value_cents INTEGER,
   pipeline TEXT,
   stage TEXT,
-  status TEXT,                            -- 'Open', 'Won', 'Lost'
+  status TEXT,
   created_at TIMESTAMPTZ,
   modified_at TIMESTAMPTZ,
   synced_at TIMESTAMPTZ DEFAULT NOW()
 );
-
 CREATE INDEX idx_contact_deals_contact ON contact_deals(contact_id);
 CREATE INDEX idx_contact_deals_status ON contact_deals(status);
 
 -- ============================================================================
--- CONTACT ACTIVITIES (email opens, clicks, and other activities)
+-- CONTACT ACTIVITIES
 -- ============================================================================
-CREATE TABLE IF NOT EXISTS contact_activities (
+CREATE TABLE contact_activities (
   id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::TEXT,
   contact_id TEXT NOT NULL REFERENCES contacts(id),
-  activity_type TEXT NOT NULL,            -- 'email_open', 'email_click', 'email_bounce', 'unsubscribe'
+  activity_type TEXT NOT NULL,
   timestamp TIMESTAMPTZ,
   campaign_id TEXT,
   campaign_name TEXT,
@@ -82,62 +93,52 @@ CREATE TABLE IF NOT EXISTS contact_activities (
   details TEXT,
   synced_at TIMESTAMPTZ DEFAULT NOW()
 );
-
 CREATE INDEX idx_contact_activities_contact ON contact_activities(contact_id);
 CREATE INDEX idx_contact_activities_type ON contact_activities(activity_type);
 CREATE INDEX idx_contact_activities_ts ON contact_activities(timestamp);
 
 -- ============================================================================
--- TIMELINE EVENTS (unified, pre-built timeline — computed server-side during sync)
+-- TIMELINE EVENTS
 -- ============================================================================
-CREATE TABLE IF NOT EXISTS timeline_events (
+CREATE TABLE timeline_events (
   id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::TEXT,
   contact_id TEXT NOT NULL REFERENCES contacts(id),
   timestamp TIMESTAMPTZ NOT NULL,
-  category TEXT NOT NULL,                 -- CONTACT, TAG, AUTOMATION, EMAIL, DEAL, NOTE, SMS_INBOUND, SMS_OUTBOUND, CALL_INBOUND, CALL_OUTBOUND, CALL_MISSED, VOICEMAIL, BOOKING, STATE, ACTIVITY
-  event TEXT NOT NULL,                    -- 'Tag Added', 'Email Opened', 'SMS Received', etc.
+  category TEXT NOT NULL,
+  event TEXT NOT NULL,
   details TEXT,
-  source TEXT,                            -- 'ActiveCampaign', 'JustCall Notes', etc.
-  source_id TEXT,                         -- original record ID for deduplication
+  source TEXT,
+  source_id TEXT,
   synced_at TIMESTAMPTZ DEFAULT NOW()
 );
-
 CREATE INDEX idx_timeline_contact ON timeline_events(contact_id);
 CREATE INDEX idx_timeline_ts ON timeline_events(timestamp);
 CREATE INDEX idx_timeline_category ON timeline_events(category);
 CREATE INDEX idx_timeline_source_id ON timeline_events(source_id);
--- Unique constraint to prevent duplicate timeline entries on re-sync
-CREATE UNIQUE INDEX idx_timeline_dedup ON timeline_events(contact_id, category, source_id) WHERE source_id IS NOT NULL;
 
 -- ============================================================================
--- TAG LOOKUP (cache tag ID → name so we don't re-fetch)
+-- LOOKUP CACHES
 -- ============================================================================
-CREATE TABLE IF NOT EXISTS tag_lookup (
-  id TEXT PRIMARY KEY,                    -- AC tag ID
+CREATE TABLE tag_lookup (
+  id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
   synced_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- ============================================================================
--- AUTOMATION LOOKUP (cache automation ID → name)
--- ============================================================================
-CREATE TABLE IF NOT EXISTS automation_lookup (
-  id TEXT PRIMARY KEY,                    -- AC automation ID
+CREATE TABLE automation_lookup (
+  id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
   synced_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- ============================================================================
--- DEAL STAGE / PIPELINE LOOKUP
--- ============================================================================
-CREATE TABLE IF NOT EXISTS deal_stage_lookup (
+CREATE TABLE deal_stage_lookup (
   id TEXT PRIMARY KEY,
   title TEXT NOT NULL,
   group_id TEXT,
   synced_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE TABLE IF NOT EXISTS deal_pipeline_lookup (
+CREATE TABLE deal_pipeline_lookup (
   id TEXT PRIMARY KEY,
   title TEXT NOT NULL,
   synced_at TIMESTAMPTZ DEFAULT NOW()

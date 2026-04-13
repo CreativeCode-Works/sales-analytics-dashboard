@@ -15,6 +15,7 @@ on:
           - dump-fields   # List all AC field definitions (IDs)
           - calendly-only # Only sync Calendly
           - justcall-only # Only sync JustCall
+          - writeback     # Push dashboard changes to AC
           - incremental   # Only contacts updated since last sync
           - full          # All contacts (slow, hours)
       days:
@@ -92,6 +93,12 @@ jobs:
             echo "desc=Calendly only (last $DAYS days)" >> $GITHUB_OUTPUT
             echo "run_ac=false" >> $GITHUB_OUTPUT
             echo "run_calendly=true" >> $GITHUB_OUTPUT
+            echo "run_justcall=false" >> $GITHUB_OUTPUT
+          elif [ "$MODE" = "writeback" ]; then
+            echo "ac_script=sync-writeback.js" >> $GITHUB_OUTPUT
+            echo "desc=Push dashboard changes to AC" >> $GITHUB_OUTPUT
+            echo "run_ac=true" >> $GITHUB_OUTPUT
+            echo "run_calendly=false" >> $GITHUB_OUTPUT
             echo "run_justcall=false" >> $GITHUB_OUTPUT
           elif [ "$MODE" = "justcall-only" ]; then
             echo "ac_script=echo 'Skipping AC'" >> $GITHUB_OUTPUT

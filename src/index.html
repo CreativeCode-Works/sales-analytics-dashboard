@@ -123,7 +123,20 @@
     .cd-header { padding: 16px 20px; border-bottom: 1px solid #2d3148; }
     .cd-name { font-size: 20px; font-weight: 700; color: #fff; }
     .cd-email { font-size: 13px; color: #8b95b0; margin-top: 2px; }
-    .cd-phone { font-size: 12px; color: #5a6178; }
+    .cd-phone { font-size: 12px; color: #5a6178; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .cd-action-btn { display: inline-flex; align-items: center; gap: 5px; padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; border: none; text-decoration: none; transition: all 0.15s; }
+    .cd-action-btn.call { background: #48bb7830; color: #48bb78; }
+    .cd-action-btn.call:hover { background: #48bb7850; }
+    .cd-action-btn.text { background: #4299e130; color: #4299e1; }
+    .cd-action-btn.text:hover { background: #4299e150; }
+    .cd-note-section { padding: 12px 20px; border-bottom: 1px solid #2d3148; }
+    .cd-note-section h4 { font-size: 11px; color: #5a6178; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+    .cd-note-input { display: flex; gap: 8px; }
+    .cd-note-input textarea { flex: 1; padding: 8px 12px; border-radius: 6px; border: 1px solid #2d3148; background: #0f1117; color: #e2e8f0; font-size: 13px; font-family: inherit; resize: vertical; min-height: 60px; outline: none; }
+    .cd-note-input textarea:focus { border-color: #667eea; }
+    .cd-note-input button { padding: 8px 16px; border-radius: 6px; border: none; background: #667eea; color: white; font-size: 12px; font-weight: 600; cursor: pointer; align-self: flex-end; }
+    .cd-note-input button:hover { background: #5a6fd6; }
+    .cd-note-input button:disabled { opacity: 0.5; cursor: not-allowed; }
 
     .cd-profile { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; padding: 16px 20px; border-bottom: 1px solid #2d3148; }
     .cd-field { }
@@ -955,7 +968,13 @@
         <div class="cd-header">
           <div class="cd-name">${c.first_name || ''} ${c.last_name || ''}</div>
           <div class="cd-email">${c.email || '-'}</div>
-          <div class="cd-phone">${c.phone || '-'} &middot; Created ${createdDate}</div>
+          <div class="cd-phone">
+            <span>${c.phone || '-'} &middot; Created ${createdDate}</span>
+            ${c.phone ? `
+              <a href="tel:${c.phone}" class="cd-action-btn call">&#128222; Call</a>
+              <a href="sms:${c.phone}" class="cd-action-btn text">&#128172; Text</a>
+            ` : ''}
+          </div>
         </div>
         <div class="cd-profile">
           <div class="cd-field"><div class="cd-label">Entry Date</div><div class="cd-val">${createdDate}</div></div>
@@ -987,8 +1006,23 @@
           ${deals.length ? deals.map(d => {
             const color = d.status === 'Won' ? 'green' : d.status === 'Lost' ? 'red' : 'orange';
             const val = d.value_cents ? ` $${(d.value_cents / 100).toLocaleString()}` : '';
-            return `<span class="badge ${color}">${d.title} (${d.pipeline} &rarr; ${d.stage} - ${d.status})${val}</span>`;
-          }).join(' ') : '<span class="empty-state">No deals</span>'}
+            return `<div style="display:inline-flex;align-items:center;gap:6px;margin:2px 0">
+              <span class="badge ${color}">${d.title} (${d.pipeline} &rarr; ${d.stage} - ${d.status})${val}</span>
+              <select class="qf-pill" style="padding:3px 6px;background:#0f1117;color:#8b95b0;border:1px solid #2d3148;border-radius:4px;font-size:10px" onchange="moveDeal('${d.id}','${c.id}',this.value)">
+                <option value="">Move stage...</option>
+                <option value="won">Won</option>
+                <option value="lost">Lost</option>
+              </select>
+            </div>`;
+          }).join('') : '<span class="empty-state">No deals</span>'}
+        </div>
+        <div class="cd-note-section">
+          <h4>Add Note</h4>
+          <div class="cd-note-input">
+            <textarea id="note-input" placeholder="Write a note... (syncs to AC at end of day)"></textarea>
+            <button onclick="addNote('${c.id}')">Save</button>
+          </div>
+          <div id="note-status" style="font-size:11px;color:#48bb78;margin-top:6px;display:none"></div>
         </div>
         <div class="cd-timeline">
           <h3>Timeline (${tl.length} events)</h3>
@@ -1005,6 +1039,73 @@
           <div id="timeline-items">${tlHtml}</div>
         </div>
       `;
+    }
+
+    // =========================================================================
+    // DASHBOARD ACTIONS (deal moves, notes — queued for AC writeback)
+    // =========================================================================
+    async function moveDeal(dealId, contactId, action) {
+      if (!action) return;
+
+      const payload = { deal_id: dealId };
+      if (action === 'won') payload.new_status = 1;
+      else if (action === 'lost') payload.new_status = 2;
+
+      const { error } = await db.from('dashboard_actions').insert({
+        contact_id: contactId,
+        action_type: 'move_deal',
+        payload,
+        status: 'pending',
+      });
+
+      if (error) {
+        alert('Error saving: ' + error.message);
+        return;
+      }
+
+      // Update local state
+      const deal = contacts.find(c => c.id === contactId);
+      // Refresh contact detail
+      selectContact(contactId);
+    }
+
+    async function addNote(contactId) {
+      const textarea = document.getElementById('note-input');
+      const noteText = textarea.value.trim();
+      if (!noteText) return;
+
+      const statusEl = document.getElementById('note-status');
+
+      const { error } = await db.from('dashboard_actions').insert({
+        contact_id: contactId,
+        action_type: 'add_note',
+        payload: { note_text: noteText },
+        status: 'pending',
+      });
+
+      if (error) {
+        alert('Error saving note: ' + error.message);
+        return;
+      }
+
+      // Also add to timeline_events so it shows immediately
+      await db.from('timeline_events').insert({
+        contact_id: contactId,
+        timestamp: new Date().toISOString(),
+        category: 'NOTE',
+        event: 'Note Added (Dashboard)',
+        details: noteText.substring(0, 200),
+        source: 'Dashboard',
+        source_id: `dashboard-note-${Date.now()}`,
+      });
+
+      textarea.value = '';
+      statusEl.textContent = 'Note saved — will sync to AC at end of day';
+      statusEl.style.display = 'block';
+      setTimeout(() => { statusEl.style.display = 'none'; }, 3000);
+
+      // Refresh contact detail to show the note in timeline
+      selectContact(contactId);
     }
 
     // =========================================================================

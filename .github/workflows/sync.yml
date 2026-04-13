@@ -39,12 +39,6 @@ jobs:
         working-directory: scripts
         run: npm ci
 
-      - name: Run migration
-        working-directory: scripts
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-        run: node run-migration.js migrations/001_expanded_tables.sql
-
       - name: Determine sync command
         id: cmd
         run: |

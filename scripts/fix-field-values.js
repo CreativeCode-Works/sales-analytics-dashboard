@@ -96,8 +96,16 @@ async function run() {
         if (!key) continue;
         const val = fv.value;
         if (['quiz_taken', 'masterclass_taken'].includes(key)) fields[key] = val === 'Taken';
-        else if (['smd_purchased', 'rise_purchased', 'bundle_purchased'].includes(key)) fields[key] = val === 'Yes' || val === 'YES';
+        else if (['smd_purchased', 'rise_purchased', 'bundle_purchased'].includes(key)) fields[key] = val && val.toLowerCase().includes('yes');
         else if (val && val.trim()) fields[key] = val;
+      }
+
+      // Also check tags in Supabase (AC automation doesn't always set the field)
+      if (!fields.quiz_taken || !fields.masterclass_taken) {
+        const { data: tags } = await supabase.from('contact_tags').select('tag_name').eq('contact_id', contact.id);
+        const tagNames = (tags || []).map(t => (t.tag_name || '').toLowerCase());
+        if (!fields.quiz_taken && tagNames.some(t => t === 'takeitorleaveit-quiz')) fields.quiz_taken = true;
+        if (!fields.masterclass_taken && tagNames.some(t => t.includes('masterclass'))) fields.masterclass_taken = true;
       }
 
       const update = {

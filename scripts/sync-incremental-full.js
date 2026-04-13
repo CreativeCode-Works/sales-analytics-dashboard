@@ -129,7 +129,7 @@ function parseContact(contact, fieldValues) {
     if (!key) continue;
     const val = fv.value;
     if (['quiz_taken', 'masterclass_taken'].includes(key)) fields[key] = val === 'Taken';
-    else if (['smd_purchased', 'rise_purchased', 'bundle_purchased'].includes(key)) fields[key] = val === 'Yes' || val === 'YES';
+    else if (['smd_purchased', 'rise_purchased', 'bundle_purchased'].includes(key)) fields[key] = val && val.toLowerCase().includes('yes');
     else if (val && val.trim()) fields[key] = val;
   }
   return {
@@ -490,6 +490,16 @@ async function syncOneContact(contact) {
 
   // Upsert all data
   const parsed = parseContact(contact, fieldValues);
+
+  // Also derive booleans from tags (AC automation doesn't always set the field)
+  const tagNames = tags.map(t => (t.tag_name || '').toLowerCase());
+  if (!parsed.masterclass_taken && tagNames.some(t => t.includes('masterclass'))) {
+    parsed.masterclass_taken = true;
+  }
+  if (!parsed.quiz_taken && tagNames.some(t => t === 'takeitorleaveit-quiz')) {
+    parsed.quiz_taken = true;
+  }
+
   await supabase.from('contacts').upsert(parsed, { onConflict: 'id' });
   if (allNotes.length > 0) await supabase.from('contact_notes').upsert(allNotes, { onConflict: 'id' });
   await supabase.from('contact_tags').delete().eq('contact_id', contactId);

@@ -740,9 +740,9 @@
     }
 
     // =========================================================================
-    // CONTACT DETAIL
+    // CONTACT DETAIL (now uses real timeline_events, tags, deals from Supabase)
     // =========================================================================
-    function selectContact(id) {
+    async function selectContact(id) {
       selectedContact = contacts.find(c => c.id === id);
       if (!selectedContact) return;
 
@@ -770,118 +770,127 @@
         }
       }
 
-      renderContactDetail();
+      await renderContactDetail();
     }
 
-    function renderContactDetail() {
+    const CATEGORY_ICONS = {
+      'CONTACT': '&#128100;', 'TAG': '&#127991;', 'AUTOMATION': '&#9881;',
+      'EMAIL': '&#9993;', 'DEAL': '&#128176;', 'NOTE': '&#128221;',
+      'SMS_INBOUND': '&#128172;', 'SMS_OUTBOUND': '&#128172;',
+      'CALL_INBOUND': '&#128222;', 'CALL_OUTBOUND': '&#128222;',
+      'CALL_MISSED': '&#128222;', 'VOICEMAIL': '&#128223;',
+      'BOOKING': '&#128197;', 'STATE': '&#128260;', 'ACTIVITY': '&#9889;',
+    };
+
+    const CATEGORY_COLORS = {
+      'CONTACT': '#667eea', 'TAG': '#9f7aea', 'AUTOMATION': '#ed8936',
+      'EMAIL': '#4299e1', 'DEAL': '#48bb78', 'NOTE': '#718096',
+      'SMS_INBOUND': '#38b2ac', 'SMS_OUTBOUND': '#38b2ac',
+      'CALL_INBOUND': '#d69e2e', 'CALL_OUTBOUND': '#d69e2e',
+      'CALL_MISSED': '#e53e3e', 'VOICEMAIL': '#d69e2e',
+      'BOOKING': '#ed8936', 'STATE': '#718096', 'ACTIVITY': '#a0aec0',
+    };
+
+    async function renderContactDetail() {
       const c = selectedContact;
 
       document.getElementById('contact-name').textContent = `${c.first_name || ''} ${c.last_name || ''}`.trim() || 'Unknown';
       document.getElementById('contact-email').textContent = c.email || '-';
       document.getElementById('contact-phone').textContent = c.phone || '-';
 
+      // Fetch real data from new tables in parallel
+      const [timelineRes, tagsRes, dealsRes, automationsRes] = await Promise.all([
+        db.from('timeline_events').select('*').eq('contact_id', c.id).order('timestamp', { ascending: true }),
+        db.from('contact_tags').select('*').eq('contact_id', c.id),
+        db.from('contact_deals').select('*').eq('contact_id', c.id),
+        db.from('contact_automations').select('*').eq('contact_id', c.id),
+      ]);
+
+      const timelineEvents = timelineRes.data || [];
+      const tags = tagsRes.data || [];
+      const deals = dealsRes.data || [];
+      const automations = automationsRes.data || [];
+
       // Stats
+      const emailCount = timelineEvents.filter(e => e.category === 'EMAIL').length;
+      const smsCount = timelineEvents.filter(e => e.category.startsWith('SMS')).length;
+      const callCount = timelineEvents.filter(e => e.category.startsWith('CALL') || e.category === 'VOICEMAIL').length;
+
       const statsHtml = `
         <div class="contact-stat">
           <div class="num">${c.amount_paid || '-'}</div>
           <div class="lbl">Paid</div>
         </div>
         <div class="contact-stat">
-          <div class="num">${c.setter || '-'}</div>
-          <div class="lbl">Setter</div>
+          <div class="num">${emailCount}</div>
+          <div class="lbl">Emails</div>
         </div>
         <div class="contact-stat">
-          <div class="num">${c.closer || '-'}</div>
-          <div class="lbl">Closer</div>
+          <div class="num">${smsCount}</div>
+          <div class="lbl">SMS</div>
+        </div>
+        <div class="contact-stat">
+          <div class="num">${callCount}</div>
+          <div class="lbl">Calls</div>
+        </div>
+        <div class="contact-stat">
+          <div class="num">${timelineEvents.length}</div>
+          <div class="lbl">Events</div>
         </div>
       `;
       document.getElementById('contact-stats').innerHTML = statsHtml;
 
-      // Badges
+      // Badges — from contact fields + real tags + deals
       const badges = [];
       if (c.quiz_taken) badges.push('<span class="contact-badge purple">Quiz Taken</span>');
       if (c.masterclass_taken) badges.push('<span class="contact-badge purple">Masterclass</span>');
       if (c.smd_purchased) badges.push('<span class="contact-badge green">SMD</span>');
       if (c.rise_purchased) badges.push('<span class="contact-badge green">RISE</span>');
       if (c.bundle_purchased) badges.push('<span class="contact-badge green">Bundle</span>');
-      if (c.current_discovery_call) badges.push('<span class="contact-badge orange">Discovery Call Scheduled</span>');
+      if (c.current_discovery_call) badges.push('<span class="contact-badge orange">Discovery Call</span>');
       if (c.lead_source) badges.push(`<span class="contact-badge blue">Source: ${c.lead_source}</span>`);
-      if (c.opt_in_status) badges.push(`<span class="contact-badge">Opt-in: ${c.opt_in_status}</span>`);
+      if (c.setter) badges.push(`<span class="contact-badge">Setter: ${c.setter}</span>`);
+      if (c.closer) badges.push(`<span class="contact-badge">Closer: ${c.closer}</span>`);
 
-      document.getElementById('contact-badges').innerHTML = badges.join('') || '<span class="contact-badge">No badges</span>';
-
-      // Timeline (simplified - just key events from fields)
-      const timeline = [];
-
-      if (c.created_at) {
-        timeline.push({
-          icon: 'contact',
-          event: 'Contact Created',
-          details: c.lead_source ? `Source: ${c.lead_source}` : '',
-          time: new Date(c.created_at)
-        });
+      // Active tags
+      for (const tag of tags) {
+        badges.push(`<span class="contact-badge" style="background:#e2e8f0">${tag.tag_name}</span>`);
       }
 
-      if (c.quiz_taken) {
-        timeline.push({
-          icon: 'quiz',
-          event: 'Completed Drinking Quiz',
-          details: '',
-          time: new Date(c.created_at) // Approximate
-        });
+      // Open deals
+      for (const deal of deals) {
+        const color = deal.status === 'Won' ? '#c6f6d5' : deal.status === 'Lost' ? '#fed7d7' : '#feebc8';
+        const value = deal.value_cents ? `$${(deal.value_cents / 100).toLocaleString()}` : '';
+        badges.push(`<span class="contact-badge" style="background:${color}">${deal.title} ${value} (${deal.status})</span>`);
       }
 
-      if (c.masterclass_taken) {
-        timeline.push({
-          icon: 'masterclass',
-          event: 'Attended Masterclass',
-          details: '',
-          time: new Date(c.created_at) // Approximate
-        });
+      // Active automations
+      for (const auto of automations.filter(a => a.status === 'Active')) {
+        badges.push(`<span class="contact-badge" style="background:#feebc8">${auto.automation_name}</span>`);
       }
 
-      if (c.current_discovery_call) {
-        timeline.push({
-          icon: 'call',
-          event: 'Discovery Call Scheduled',
-          details: c.current_discovery_call,
-          time: new Date(c.current_discovery_call) || new Date()
-        });
-      }
+      document.getElementById('contact-badges').innerHTML = badges.join('') || '<span class="contact-badge">No data</span>';
 
-      if (c.date_paid) {
-        timeline.push({
-          icon: 'purchase',
-          event: 'Purchase Made',
-          details: `$${c.amount_paid || '?'}`,
-          time: new Date(c.date_paid)
-        });
-      }
+      // Real timeline from timeline_events table
+      const timelineHtml = timelineEvents.map(t => {
+        const icon = CATEGORY_ICONS[t.category] || '&#9889;';
+        const color = CATEGORY_COLORS[t.category] || '#a0aec0';
+        const time = new Date(t.timestamp);
+        const timeStr = time.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
 
-      if (c.program_start) {
-        timeline.push({
-          icon: 'purchase',
-          event: 'Program Started',
-          details: '',
-          time: new Date(c.program_start)
-        });
-      }
-
-      // Sort by time
-      timeline.sort((a, b) => a.time - b.time);
-
-      const timelineHtml = timeline.map(t => `
-        <div class="timeline-item">
-          <div class="timeline-icon ${t.icon}">
-            ${t.icon === 'contact' ? '👤' : t.icon === 'quiz' ? '📝' : t.icon === 'masterclass' ? '🎓' : t.icon === 'call' ? '📞' : t.icon === 'purchase' ? '💰' : '📧'}
+        return `
+          <div class="timeline-item">
+            <div class="timeline-icon" style="background: ${color}20; color: ${color}; border-color: ${color}">
+              ${icon}
+            </div>
+            <div class="timeline-content">
+              <div class="event">${t.event}</div>
+              ${t.details ? `<div class="details">${t.details}</div>` : ''}
+              <div class="time">${timeStr} <span style="color:#aaa;font-size:10px">${t.source || ''}</span></div>
+            </div>
           </div>
-          <div class="timeline-content">
-            <div class="event">${t.event}</div>
-            ${t.details ? `<div class="details">${t.details}</div>` : ''}
-            <div class="time">${t.time.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
-          </div>
-        </div>
-      `).join('') || '<div class="empty-state">No timeline events</div>';
+        `;
+      }).join('') || '<div class="empty-state">No timeline events synced for this contact</div>';
 
       document.getElementById('contact-timeline').innerHTML = timelineHtml;
       document.getElementById('contact-section').classList.add('visible');

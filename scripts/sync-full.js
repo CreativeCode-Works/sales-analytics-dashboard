@@ -716,15 +716,18 @@ function buildTimeline(contactId, { contact, tags, automations, deals, emailActi
 async function syncOneContact(contact) {
   const contactId = String(contact.id);
 
-  // Fetch all AC data in parallel (notes, tags, automations, deals, activities, logs)
-  const [contactNotes, tags, automations, deals, emailActivities, contactLogs] = await Promise.all([
+  // Fetch all AC data in parallel (notes, tags, automations, deals, activities, logs, field values)
+  const [contactNotes, tags, automations, deals, emailActivities, contactLogs, fieldValuesRes] = await Promise.all([
     fetchContactNotes(contactId),
     fetchContactTags(contactId),
     fetchContactAutomations(contactId),
     fetchContactDeals(contactId),
     fetchContactEmailActivities(contactId),
     fetchContactLogs(contactId),
+    fetchAC(`/contacts/${contactId}/fieldValues`).catch(() => ({ fieldValues: [] })),
   ]);
+  // Use explicitly fetched field values (list endpoint often returns empty fieldValues)
+  const fieldValues = fieldValuesRes.fieldValues || contact.fieldValues || [];
 
   // Fetch deal notes sequentially (one per deal)
   let allDealNotes = [];
@@ -771,8 +774,8 @@ async function syncOneContact(contact) {
     contactLogs, smsFromNotes, callsFromNotes,
   });
 
-  // Upsert contact fields
-  const parsed = parseContact(contact, contact.fieldValues || []);
+  // Upsert contact fields (using explicitly fetched field values)
+  const parsed = parseContact(contact, fieldValues);
   await supabase.from('contacts').upsert(parsed, { onConflict: 'id' });
 
   // Upsert notes

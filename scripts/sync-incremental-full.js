@@ -441,14 +441,16 @@ function buildTimeline(contactId, { contact, tags, automations, deals, emailActi
 async function syncOneContact(contact) {
   const contactId = String(contact.id);
 
-  const [contactNotes, tags, automations, deals, emailActivities, contactLogs] = await Promise.all([
+  const [contactNotes, tags, automations, deals, emailActivities, contactLogs, fieldValuesRes] = await Promise.all([
     fetchContactNotes(contactId),
     fetchContactTags(contactId),
     fetchContactAutomations(contactId),
     fetchContactDeals(contactId),
     fetchContactEmailActivities(contactId),
     fetchContactLogs(contactId),
+    fetchAC(`/contacts/${contactId}/fieldValues`).catch(() => ({ fieldValues: [] })),
   ]);
+  const fieldValues = fieldValuesRes.fieldValues || contact.fieldValues || [];
 
   let allDealNotes = [];
   for (const deal of deals) {
@@ -487,7 +489,7 @@ async function syncOneContact(contact) {
   });
 
   // Upsert all data
-  const parsed = parseContact(contact, contact.fieldValues || []);
+  const parsed = parseContact(contact, fieldValues);
   await supabase.from('contacts').upsert(parsed, { onConflict: 'id' });
   if (allNotes.length > 0) await supabase.from('contact_notes').upsert(allNotes, { onConflict: 'id' });
   await supabase.from('contact_tags').delete().eq('contact_id', contactId);

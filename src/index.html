@@ -204,6 +204,18 @@
     <div class="header-right">
       <div class="meta" id="sync-status">Loading...</div>
       <div class="meta" id="last-updated" style="color:#5a6178"></div>
+      <select id="tz-select" onchange="saveTimezone(this.value)" style="padding:3px 6px;background:#1a1d2e;color:#8b95b0;border:1px solid #2d3148;border-radius:4px;font-size:10px">
+        <option value="America/New_York">Eastern</option>
+        <option value="America/Chicago">Central</option>
+        <option value="America/Denver">Mountain</option>
+        <option value="America/Los_Angeles">Pacific</option>
+        <option value="America/Anchorage">Alaska</option>
+        <option value="Pacific/Honolulu">Hawaii</option>
+        <option value="Europe/London">UK</option>
+        <option value="Europe/Paris">Europe</option>
+        <option value="Australia/Sydney">Australia</option>
+        <option value="UTC">UTC</option>
+      </select>
       <button onclick="requestResync()" id="resync-btn" style="padding:4px 12px;border-radius:4px;border:1px solid #2d3148;background:#1a1d2e;color:#8b95b0;font-size:11px;cursor:pointer">Resync</button>
       <button class="close-btn" onclick="doLogout()" title="Sign out" style="font-size:12px;width:auto;padding:4px 10px">Sign out</button>
     </div>
@@ -375,12 +387,37 @@
       }
     }
 
-    function showDashboard() {
+    async function showDashboard() {
       console.log('showDashboard called');
       document.getElementById('login-screen').classList.add('hidden');
       document.querySelector('.header').style.display = 'flex';
       document.querySelector('.container').style.display = 'block';
+
+      // Load user timezone preference
+      const { data: { user } } = await db.auth.getUser();
+      if (user) {
+        const { data: prefs } = await db.from('user_preferences').select('timezone').eq('user_id', user.id).single();
+        if (prefs?.timezone) {
+          userTimezone = prefs.timezone;
+          document.getElementById('tz-select').value = userTimezone;
+        }
+      }
+
       init().catch(e => console.error('Init failed:', e));
+    }
+
+    async function saveTimezone(tz) {
+      userTimezone = tz;
+      const { data: { user } } = await db.auth.getUser();
+      if (!user) return;
+      await db.from('user_preferences').upsert({
+        user_id: user.id,
+        timezone: tz,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'user_id' });
+
+      // Re-render to apply timezone
+      render();
     }
 
     async function doLogout() {
@@ -396,6 +433,7 @@
     let calendlyEvents = [];
     let dealStages = [];
     let dealPipelines = [];
+    let userTimezone = 'America/New_York';
     let timeframe = 7; // days, 0 = all
     let selectedDay = null;
     let selectedContactId = null;
@@ -522,7 +560,7 @@
         const lastSync = syncLog?.[0]?.completed_at;
         if (lastSync) {
           const d = new Date(lastSync);
-          document.getElementById('last-updated').textContent = `Last sync: ${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} ${d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`;
+          document.getElementById('last-updated').textContent = `Last sync: ${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: userTimezone })} ${d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: userTimezone })}`;
         }
 
         document.getElementById('loading').style.display = 'none';

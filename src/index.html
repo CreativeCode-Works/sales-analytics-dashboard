@@ -1493,15 +1493,22 @@
     // JUSTCALL DIALER
     // =========================================================================
     function openJustCallDialer(phone, mode) {
-      // Open as a small popup window (like AC does) instead of a new tab
       const cleanPhone = phone.replace(/[^\d+]/g, '');
+      // Copy number to clipboard and show confirmation
+      navigator.clipboard.writeText(cleanPhone).then(() => {
+        const msg = mode === 'sms' ? 'Phone copied — open JustCall to text' : 'Phone copied — open JustCall to call';
+        // Show brief tooltip
+        const toast = document.createElement('div');
+        toast.textContent = msg;
+        toast.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#48bb78;color:white;padding:8px 16px;border-radius:6px;font-size:13px;z-index:9999';
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 2000);
+      });
+      // Also try opening JustCall app (will work if they have it as a web app)
       const w = 400, h = 700;
       const left = window.screenX + window.innerWidth - w - 20;
       const top = window.screenY + 80;
-      const url = mode === 'sms'
-        ? `https://app.justcall.io/app/macdialer?phone=${cleanPhone}&tab=sms`
-        : `https://app.justcall.io/app/macdialer?phone=${cleanPhone}`;
-      window.open(url, 'justcall_dialer', `width=${w},height=${h},left=${left},top=${top},resizable=yes,scrollbars=yes`);
+      window.open(`https://app.justcall.io/app/dialer`, 'justcall_dialer', `width=${w},height=${h},left=${left},top=${top},resizable=yes,scrollbars=yes`);
     }
 
     // =========================================================================

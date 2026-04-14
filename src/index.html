@@ -203,6 +203,8 @@
     </div>
     <div class="header-right">
       <div class="meta" id="sync-status">Loading...</div>
+      <div class="meta" id="last-updated" style="color:#5a6178"></div>
+      <button onclick="requestResync()" id="resync-btn" style="padding:4px 12px;border-radius:4px;border:1px solid #2d3148;background:#1a1d2e;color:#8b95b0;font-size:11px;cursor:pointer">Resync</button>
       <button class="close-btn" onclick="doLogout()" title="Sign out" style="font-size:12px;width:auto;padding:4px 10px">Sign out</button>
     </div>
   </div>
@@ -510,6 +512,18 @@
         const { data: pipelinesData } = await db.from('deal_pipeline_lookup').select('*');
         dealPipelines = pipelinesData || [];
         console.log(`Loaded ${dealStages.length} stages, ${dealPipelines.length} pipelines`);
+
+        // Get last sync time
+        const { data: syncLog } = await db.from('sync_log')
+          .select('completed_at')
+          .eq('status', 'success')
+          .order('id', { ascending: false })
+          .limit(1);
+        const lastSync = syncLog?.[0]?.completed_at;
+        if (lastSync) {
+          const d = new Date(lastSync);
+          document.getElementById('last-updated').textContent = `Last sync: ${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} ${d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`;
+        }
 
         document.getElementById('loading').style.display = 'none';
         document.getElementById('dashboard').style.display = 'block';
@@ -1344,6 +1358,56 @@
 
       // Refresh contact detail to show the note in timeline
       selectContact(contactId);
+    }
+
+    // =========================================================================
+    // RESYNC
+    // =========================================================================
+    async function requestResync() {
+      const btn = document.getElementById('resync-btn');
+      btn.textContent = 'Requesting...';
+      btn.disabled = true;
+
+      try {
+        // Trigger GitHub Actions workflow via API
+        const res = await fetch('https://api.github.com/repos/CreativeCode-Works/sales-analytics-dashboard/actions/workflows/sync.yml/dispatches', {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/vnd.github.v3+json',
+            'Authorization': 'token ' + (window.__GH_TOKEN || ''),
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ ref: 'main', inputs: { mode: 'incremental' } }),
+        });
+
+        if (res.status === 204) {
+          btn.textContent = 'Sync triggered!';
+          btn.style.borderColor = '#48bb78';
+          btn.style.color = '#48bb78';
+          setTimeout(() => {
+            btn.textContent = 'Resync';
+            btn.style.borderColor = '#2d3148';
+            btn.style.color = '#8b95b0';
+            btn.disabled = false;
+          }, 5000);
+        } else {
+          // Fallback: just re-fetch data from Supabase
+          btn.textContent = 'Refreshing data...';
+          await fetchData();
+          document.getElementById('sync-status').textContent = `${contacts.length} contacts | ${timelineEvents.length} events | ${calendlyEvents.length} bookings`;
+          render();
+          btn.textContent = 'Resync';
+          btn.disabled = false;
+        }
+      } catch (e) {
+        // Fallback: re-fetch from Supabase
+        btn.textContent = 'Refreshing data...';
+        await fetchData();
+        document.getElementById('sync-status').textContent = `${contacts.length} contacts | ${timelineEvents.length} events | ${calendlyEvents.length} bookings`;
+        render();
+        btn.textContent = 'Resync';
+        btn.disabled = false;
+      }
     }
 
     // =========================================================================

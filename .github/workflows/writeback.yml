@@ -1,0 +1,32 @@
+name: AC Writeback
+
+on:
+  schedule:
+    # Run every 15 minutes, offset by 5 min from the sync cron
+    - cron: '5/15 * * * *'
+  workflow_dispatch:
+
+jobs:
+  writeback:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        working-directory: scripts
+        run: npm ci
+
+      - name: Push dashboard changes to AC
+        working-directory: scripts
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          AC_KEY: ${{ secrets.AC_KEY }}
+          AC_BASE: ${{ secrets.AC_BASE }}
+        run: node sync-writeback.js

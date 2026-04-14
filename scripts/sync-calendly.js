@@ -28,13 +28,14 @@ const DAYS = getArg('--days') ? parseInt(getArg('--days')) : 30;
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-async function fetchCalendly(path) {
-  const res = await fetch(`https://api.calendly.com${path}`, {
+async function fetchCalendly(urlOrPath) {
+  const fullUrl = urlOrPath.startsWith('http') ? urlOrPath : `https://api.calendly.com${urlOrPath}`;
+  const res = await fetch(fullUrl, {
     headers: { 'Authorization': `Bearer ${CALENDLY_KEY}`, 'Content-Type': 'application/json' }
   });
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`Calendly API ${res.status}: ${path} — ${text.substring(0, 200)}`);
+    throw new Error(`Calendly API ${res.status}: ${urlOrPath.substring(0, 100)} — ${text.substring(0, 200)}`);
   }
   return res.json();
 }
@@ -65,22 +66,16 @@ async function run() {
   const maxTime = new Date().toISOString();
 
   let allEvents = [];
-  let pageToken = null;
+  let nextUrl = `https://api.calendly.com/scheduled_events?organization=${orgUri}&min_start_time=${minTime}&max_start_time=${maxTime}&count=100&sort=start_time:asc`;
 
-  while (true) {
-    let qs = `organization=${orgUri}&min_start_time=${minTime}&max_start_time=${maxTime}&count=100&sort=start_time:asc`;
-    if (pageToken) qs += `&page_token=${pageToken}`;
-
-    const data = await fetchCalendly(`/scheduled_events?${qs}`);
+  while (nextUrl) {
+    const data = await fetchCalendly(nextUrl);
     const events = data.collection || [];
     allEvents = allEvents.concat(events);
     console.log(`  Fetched ${allEvents.length} events...`);
 
-    if (data.pagination?.next_page_token) {
-      pageToken = data.pagination.next_page_token;
-    } else {
-      break;
-    }
+    // Use Calendly's full next_page URL directly
+    nextUrl = data.pagination?.next_page || null;
 
     await sleep(200);
   }

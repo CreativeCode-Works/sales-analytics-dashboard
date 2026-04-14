@@ -1283,8 +1283,8 @@
           <div class="cd-phone">
             <span>${c.phone || '-'} &middot; Created ${createdDate}</span>
             ${c.phone ? `
-              <button class="cd-action-btn call" onclick="openJustCallDialer('${c.phone}','call')">&#128222; Call</button>
-              <button class="cd-action-btn text" onclick="openJustCallDialer('${c.phone}','sms')">&#128172; Text</button>
+              <a href="tel:${c.phone}" class="cd-action-btn call" style="text-decoration:none">&#128222; <span class="jc-phone">${c.phone}</span></a>
+              <a href="sms:${c.phone}" class="cd-action-btn text" style="text-decoration:none">&#128172; Text</a>
             ` : ''}
           </div>
         </div>

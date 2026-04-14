@@ -392,6 +392,8 @@
     let contacts = [];
     let timelineEvents = [];
     let calendlyEvents = [];
+    let dealStages = [];
+    let dealPipelines = [];
     let timeframe = 30; // days, 0 = all
     let selectedDay = null;
     let selectedContactId = null;
@@ -495,6 +497,13 @@
           from += 1000;
         }
         calendlyEvents = allCalendly;
+
+        // Fetch deal stages and pipelines for the deal dropdown
+        const { data: stagesData } = await db.from('deal_stage_lookup').select('*');
+        dealStages = stagesData || [];
+        const { data: pipelinesData } = await db.from('deal_pipeline_lookup').select('*');
+        dealPipelines = pipelinesData || [];
+        console.log(`Loaded ${dealStages.length} stages, ${dealPipelines.length} pipelines`);
 
         document.getElementById('loading').style.display = 'none';
         document.getElementById('dashboard').style.display = 'block';
@@ -1157,12 +1166,24 @@
           ${deals.length ? deals.map(d => {
             const color = d.status === 'Won' ? 'green' : d.status === 'Lost' ? 'red' : 'orange';
             const val = d.value_cents ? ` $${(d.value_cents / 100).toLocaleString()}` : '';
-            return `<div style="display:inline-flex;align-items:center;gap:6px;margin:2px 0">
+            const stageOptions = dealStages.map(s => {
+              const pipeline = dealPipelines.find(p => p.id === s.group_id);
+              const pName = pipeline ? pipeline.title : '';
+              const selected = s.title === d.stage ? 'selected' : '';
+              return `<option value="stage:${s.id}" ${selected}>${pName ? pName + ' → ' : ''}${s.title}</option>`;
+            }).join('');
+            return `<div style="display:flex;align-items:center;gap:8px;margin:4px 0;flex-wrap:wrap">
               <span class="badge ${color}">${d.title} (${d.pipeline} &rarr; ${d.stage} - ${d.status})${val}</span>
-              <select class="qf-pill" style="padding:3px 6px;background:#0f1117;color:#8b95b0;border:1px solid #2d3148;border-radius:4px;font-size:10px" onchange="moveDeal('${d.id}','${c.id}',this.value)">
-                <option value="">Move stage...</option>
-                <option value="won">Won</option>
-                <option value="lost">Lost</option>
+              <select style="padding:4px 8px;background:#0f1117;color:#8b95b0;border:1px solid #2d3148;border-radius:4px;font-size:11px;min-width:180px" onchange="moveDeal('${d.id}','${c.id}',this.value)">
+                <option value="">Move to...</option>
+                <optgroup label="Stages">
+                  ${stageOptions}
+                </optgroup>
+                <optgroup label="Status">
+                  <option value="status:won" ${d.status === 'Won' ? 'selected' : ''}>Mark Won</option>
+                  <option value="status:lost" ${d.status === 'Lost' ? 'selected' : ''}>Mark Lost</option>
+                  <option value="status:open" ${d.status === 'Open' ? 'selected' : ''}>Mark Open</option>
+                </optgroup>
               </select>
             </div>`;
           }).join('') : '<span class="empty-state">No deals</span>'}
@@ -1199,8 +1220,16 @@
       if (!action) return;
 
       const payload = { deal_id: dealId };
-      if (action === 'won') payload.new_status = 1;
-      else if (action === 'lost') payload.new_status = 2;
+      if (action.startsWith('status:')) {
+        const status = action.split(':')[1];
+        if (status === 'won') payload.new_status = 1;
+        else if (status === 'lost') payload.new_status = 2;
+        else if (status === 'open') payload.new_status = 0;
+      } else if (action.startsWith('stage:')) {
+        payload.new_stage_id = action.split(':')[1];
+        const stage = dealStages.find(s => s.id === payload.new_stage_id);
+        if (stage?.group_id) payload.new_group_id = stage.group_id;
+      }
 
       const { error } = await db.from('dashboard_actions').insert({
         contact_id: contactId,

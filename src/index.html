@@ -600,7 +600,14 @@
       const hasWhyNow = fc.filter(c => c.why_now).length;
 
       // Filter Calendly events by timeframe
-      const calInRange = calendlyEvents.filter(e => new Date(e.start_time) >= cutoff);
+      // Only count Calendly events with "discovery" in event type or host name
+      const isDiscoveryEvent = (e) => {
+        const eventType = (e.event_type || '').toLowerCase();
+        const hostName = (e.host_name || '').toLowerCase();
+        const eventSlug = (e.event_type_slug || '').toLowerCase();
+        return eventType.includes('discovery') || hostName.includes('discovery') || eventSlug.includes('discovery');
+      };
+      const calInRange = calendlyEvents.filter(e => new Date(e.start_time) >= cutoff && isDiscoveryEvent(e));
       const calActive = calInRange.filter(e => e.status === 'active' && !e.no_show);
       const calCanceled = calInRange.filter(e => e.status === 'canceled');
       const calNoShow = calInRange.filter(e => e.no_show);

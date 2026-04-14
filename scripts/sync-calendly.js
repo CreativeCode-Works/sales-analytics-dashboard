@@ -68,10 +68,16 @@ async function run() {
   let pageToken = null;
 
   while (true) {
-    let url = `/scheduled_events?organization=${encodeURIComponent(orgUri)}&min_start_time=${minTime}&max_start_time=${maxTime}&count=100&sort=start_time:asc`;
-    if (pageToken) url += `&page_token=${pageToken}`;
+    const params = new URLSearchParams({
+      organization: orgUri,
+      min_start_time: minTime,
+      max_start_time: maxTime,
+      count: '100',
+      sort: 'start_time:asc',
+    });
+    if (pageToken) params.set('page_token', pageToken);
 
-    const data = await fetchCalendly(url);
+    const data = await fetchCalendly(`/scheduled_events?${params.toString()}`);
     const events = data.collection || [];
     allEvents = allEvents.concat(events);
     console.log(`  Fetched ${allEvents.length} events...`);

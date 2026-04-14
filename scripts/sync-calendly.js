@@ -65,17 +65,22 @@ async function run() {
   const maxTime = new Date().toISOString();
 
   let allEvents = [];
-  let nextPage = `/scheduled_events?organization=${encodeURIComponent(orgUri)}&min_start_time=${minTime}&max_start_time=${maxTime}&count=100&sort=start_time:asc`;
+  let pageToken = null;
 
-  while (nextPage) {
-    const data = await fetchCalendly(nextPage);
+  while (true) {
+    let url = `/scheduled_events?organization=${encodeURIComponent(orgUri)}&min_start_time=${minTime}&max_start_time=${maxTime}&count=100&sort=start_time:asc`;
+    if (pageToken) url += `&page_token=${pageToken}`;
+
+    const data = await fetchCalendly(url);
     const events = data.collection || [];
     allEvents = allEvents.concat(events);
     console.log(`  Fetched ${allEvents.length} events...`);
 
-    nextPage = data.pagination?.next_page_token
-      ? `/scheduled_events?organization=${encodeURIComponent(orgUri)}&min_start_time=${minTime}&max_start_time=${maxTime}&count=100&page_token=${data.pagination.next_page_token}`
-      : null;
+    if (data.pagination?.next_page_token) {
+      pageToken = data.pagination.next_page_token;
+    } else {
+      break;
+    }
 
     await sleep(200);
   }

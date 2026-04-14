@@ -139,6 +139,7 @@ jobs:
 
       - name: "Calendly Sync (last ${{ steps.cmd.outputs.days }} days)"
         if: steps.cmd.outputs.run_calendly == 'true'
+        continue-on-error: true
         working-directory: scripts
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -148,6 +149,7 @@ jobs:
 
       - name: "JustCall Sync (last ${{ steps.cmd.outputs.days }} days)"
         if: steps.cmd.outputs.run_justcall == 'true'
+        continue-on-error: true
         working-directory: scripts
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}

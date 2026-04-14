@@ -391,6 +391,7 @@
     // =========================================================================
     let contacts = [];
     let timelineEvents = [];
+    let calendlyEvents = [];
     let timeframe = 30; // days, 0 = all
     let selectedDay = null;
     let selectedContactId = null;
@@ -478,9 +479,26 @@
         }
         timelineEvents = allTimeline;
 
+        // Fetch Calendly events
+        let allCalendly = [];
+        from = 0;
+        while (true) {
+          const { data, error } = await db
+            .from('calendly_events')
+            .select('*')
+            .order('start_time', { ascending: false })
+            .range(from, from + 999);
+          if (error) { console.error('Calendly fetch error:', error); break; }
+          if (!data || data.length === 0) break;
+          allCalendly = allCalendly.concat(data);
+          if (data.length < 1000) break;
+          from += 1000;
+        }
+        calendlyEvents = allCalendly;
+
         document.getElementById('loading').style.display = 'none';
         document.getElementById('dashboard').style.display = 'block';
-        document.getElementById('sync-status').textContent = `${contacts.length} contacts | ${timelineEvents.length} events`;
+        document.getElementById('sync-status').textContent = `${contacts.length} contacts | ${timelineEvents.length} events | ${calendlyEvents.length} bookings`;
 
         render();
       } catch (err) {
@@ -578,9 +596,22 @@
         </div>
       `;
 
-      // MOFU (stubbed for Calendly)
+      // MOFU — from Calendly data
       const hasWhyNow = fc.filter(c => c.why_now).length;
-      const hasDiscovery = fc.filter(c => c.current_discovery_call).length;
+
+      // Filter Calendly events by timeframe
+      const calInRange = calendlyEvents.filter(e => new Date(e.start_time) >= cutoff);
+      const calActive = calInRange.filter(e => e.status === 'active' && !e.no_show);
+      const calCanceled = calInRange.filter(e => e.status === 'canceled');
+      const calNoShow = calInRange.filter(e => e.no_show);
+      const calRescheduled = calInRange.filter(e => e.rescheduled);
+      const calFollowUp = calInRange.filter(e => e.is_follow_up);
+
+      // Total booked = active (not canceled, not no-show)
+      const totalBooked = calActive.length;
+      // Unique = unique emails that booked
+      const uniqueBookedEmails = new Set(calActive.map(e => e.contact_email?.toLowerCase()).filter(Boolean));
+      const uniqueBooked = uniqueBookedEmails.size;
 
       document.getElementById('kpi-mofu-grid').innerHTML = `
         <div class="kpi-card">
@@ -590,23 +621,29 @@
         </div>
         <div class="kpi-card">
           <div class="label">Calls Booked</div>
-          <div class="value">${fmt(hasDiscovery)}</div>
-          <div class="sub">has discovery call</div>
+          <div class="value">${fmt(totalBooked)}</div>
+          <div class="split">
+            <div class="split-item"><strong>${totalBooked}</strong> total</div>
+            <div class="split-item"><strong>${uniqueBooked}</strong> unique</div>
+          </div>
         </div>
         <div class="kpi-card">
           <div class="label">Reschedules</div>
-          <div class="value">--</div>
-          <div class="sub">needs Calendly</div>
+          <div class="value">${fmt(calRescheduled.length)}</div>
+          <div class="sub">from Calendly</div>
         </div>
         <div class="kpi-card">
           <div class="label">Follow-ups</div>
-          <div class="value">--</div>
-          <div class="sub">needs Calendly</div>
+          <div class="value">${fmt(calFollowUp.length)}</div>
+          <div class="sub">from Calendly</div>
         </div>
         <div class="kpi-card">
           <div class="label">No-Shows & Cancels</div>
-          <div class="value">--</div>
-          <div class="sub">needs Calendly</div>
+          <div class="value">${fmt(calNoShow.length + calCanceled.length)}</div>
+          <div class="split">
+            <div class="split-item"><strong>${calNoShow.length}</strong> no-shows</div>
+            <div class="split-item"><strong>${calCanceled.length}</strong> canceled</div>
+          </div>
         </div>
       `;
 

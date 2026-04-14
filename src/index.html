@@ -1175,25 +1175,43 @@
           ${deals.length ? deals.map(d => {
             const color = d.status === 'Won' ? 'green' : d.status === 'Lost' ? 'red' : 'orange';
             const val = d.value_cents ? ` $${(d.value_cents / 100).toLocaleString()}` : '';
-            const stageOptions = dealStages.map(s => {
-              const pipeline = dealPipelines.find(p => p.id === s.group_id);
-              const pName = pipeline ? pipeline.title : '';
-              const selected = s.title === d.stage ? 'selected' : '';
-              return `<option value="stage:${s.id}" ${selected}>${pName ? pName + ' → ' : ''}${s.title}</option>`;
-            }).join('');
-            return `<div style="display:flex;align-items:center;gap:8px;margin:4px 0;flex-wrap:wrap">
-              <span class="badge ${color}">${d.title} (${d.pipeline} &rarr; ${d.stage} - ${d.status})${val}</span>
-              <select style="padding:4px 8px;background:#0f1117;color:#8b95b0;border:1px solid #2d3148;border-radius:4px;font-size:11px;min-width:180px" onchange="moveDeal('${d.id}','${c.id}',this.value)">
-                <option value="">Move to...</option>
-                <optgroup label="Stages">
-                  ${stageOptions}
-                </optgroup>
-                <optgroup label="Status">
-                  <option value="status:won" ${d.status === 'Won' ? 'selected' : ''}>Mark Won</option>
-                  <option value="status:lost" ${d.status === 'Lost' ? 'selected' : ''}>Mark Lost</option>
-                  <option value="status:open" ${d.status === 'Open' ? 'selected' : ''}>Mark Open</option>
-                </optgroup>
-              </select>
+            const uniquePipelines = [...new Map(dealStages.filter(s => s.group_id).map(s => {
+              const p = dealPipelines.find(pp => pp.id === s.group_id);
+              return [s.group_id, { id: s.group_id, title: p ? p.title : 'Pipeline ' + s.group_id }];
+            })).values()];
+            const pipelineOptions = uniquePipelines.map(p =>
+              `<option value="${p.id}" ${p.title === d.pipeline ? 'selected' : ''}>${p.title}</option>`
+            ).join('');
+            return `<div style="margin:6px 0;padding:10px;background:#0f1117;border:1px solid #2d3148;border-radius:6px">
+              <div style="margin-bottom:8px"><span class="badge ${color}">${d.title} (${d.pipeline} &rarr; ${d.stage} - ${d.status})${val}</span></div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+                <div style="flex:1;min-width:140px">
+                  <div style="font-size:9px;color:#5a6178;margin-bottom:2px">PIPELINE</div>
+                  <select id="deal-pipeline-${d.id}" onchange="updateStageDropdown('${d.id}')" style="width:100%;padding:6px 8px;background:#1a1d2e;color:#c4cbdd;border:1px solid #2d3148;border-radius:4px;font-size:11px">
+                    <option value="">Select pipeline...</option>
+                    ${pipelineOptions}
+                  </select>
+                </div>
+                <div style="flex:1;min-width:140px">
+                  <div style="font-size:9px;color:#5a6178;margin-bottom:2px">STAGE</div>
+                  <select id="deal-stage-${d.id}" style="width:100%;padding:6px 8px;background:#1a1d2e;color:#c4cbdd;border:1px solid #2d3148;border-radius:4px;font-size:11px">
+                    <option value="">Select stage...</option>
+                  </select>
+                </div>
+                <div style="min-width:100px">
+                  <div style="font-size:9px;color:#5a6178;margin-bottom:2px">STATUS</div>
+                  <select id="deal-status-${d.id}" style="width:100%;padding:6px 8px;background:#1a1d2e;color:#c4cbdd;border:1px solid #2d3148;border-radius:4px;font-size:11px">
+                    <option value="">No change</option>
+                    <option value="0" ${d.status === 'Open' ? 'selected' : ''}>Open</option>
+                    <option value="1" ${d.status === 'Won' ? 'selected' : ''}>Won</option>
+                    <option value="2" ${d.status === 'Lost' ? 'selected' : ''}>Lost</option>
+                  </select>
+                </div>
+                <div style="align-self:flex-end">
+                  <button onclick="saveDealChanges('${d.id}','${c.id}')" style="padding:6px 14px;background:#667eea;color:white;border:none;border-radius:4px;font-size:11px;font-weight:600;cursor:pointer;margin-top:12px">Save</button>
+                </div>
+              </div>
+              <div id="deal-msg-${d.id}" style="font-size:11px;color:#48bb78;margin-top:6px;display:none"></div>
             </div>`;
           }).join('') : '<span class="empty-state">No deals</span>'}
         </div>
@@ -1225,19 +1243,42 @@
     // =========================================================================
     // DASHBOARD ACTIONS (deal moves, notes — queued for AC writeback)
     // =========================================================================
-    async function moveDeal(dealId, contactId, action) {
-      if (!action) return;
+    function updateStageDropdown(dealId) {
+      const pipelineId = document.getElementById(`deal-pipeline-${dealId}`).value;
+      const stageSelect = document.getElementById(`deal-stage-${dealId}`);
+      const stages = dealStages.filter(s => s.group_id === pipelineId);
+
+      stageSelect.innerHTML = '<option value="">Select stage...</option>' +
+        stages.map(s => `<option value="${s.id}">${s.title}</option>`).join('');
+    }
+
+    async function saveDealChanges(dealId, contactId) {
+      const pipelineEl = document.getElementById(`deal-pipeline-${dealId}`);
+      const stageEl = document.getElementById(`deal-stage-${dealId}`);
+      const statusEl = document.getElementById(`deal-status-${dealId}`);
+      const msgEl = document.getElementById(`deal-msg-${dealId}`);
 
       const payload = { deal_id: dealId };
-      if (action.startsWith('status:')) {
-        const status = action.split(':')[1];
-        if (status === 'won') payload.new_status = 1;
-        else if (status === 'lost') payload.new_status = 2;
-        else if (status === 'open') payload.new_status = 0;
-      } else if (action.startsWith('stage:')) {
-        payload.new_stage_id = action.split(':')[1];
-        const stage = dealStages.find(s => s.id === payload.new_stage_id);
+      let hasChange = false;
+
+      if (stageEl.value) {
+        payload.new_stage_id = stageEl.value;
+        const stage = dealStages.find(s => s.id === stageEl.value);
         if (stage?.group_id) payload.new_group_id = stage.group_id;
+        hasChange = true;
+      }
+
+      if (statusEl.value) {
+        payload.new_status = parseInt(statusEl.value);
+        hasChange = true;
+      }
+
+      if (!hasChange) {
+        msgEl.textContent = 'No changes selected';
+        msgEl.style.color = '#ed8936';
+        msgEl.style.display = 'block';
+        setTimeout(() => { msgEl.style.display = 'none'; }, 2000);
+        return;
       }
 
       const { error } = await db.from('dashboard_actions').insert({
@@ -1248,14 +1289,16 @@
       });
 
       if (error) {
-        alert('Error saving: ' + error.message);
+        msgEl.textContent = 'Error: ' + error.message;
+        msgEl.style.color = '#e53e3e';
+        msgEl.style.display = 'block';
         return;
       }
 
-      // Update local state
-      const deal = contacts.find(c => c.id === contactId);
-      // Refresh contact detail
-      selectContact(contactId);
+      msgEl.textContent = 'Saved — will sync to AC';
+      msgEl.style.color = '#48bb78';
+      msgEl.style.display = 'block';
+      setTimeout(() => { msgEl.style.display = 'none'; }, 3000);
     }
 
     async function addNote(contactId) {

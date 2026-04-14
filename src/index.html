@@ -1283,8 +1283,8 @@
           <div class="cd-phone">
             <span>${c.phone || '-'} &middot; Created ${createdDate}</span>
             ${c.phone ? `
-              <a href="https://app.justcall.io/app/macdialer?phone=${encodeURIComponent(c.phone)}" target="_blank" class="cd-action-btn call">&#128222; Call</a>
-              <a href="https://app.justcall.io/app/sms?phone=${encodeURIComponent(c.phone)}" target="_blank" class="cd-action-btn text">&#128172; Text</a>
+              <button class="cd-action-btn call" onclick="openJustCallDialer('${c.phone}','call')">&#128222; Call</button>
+              <button class="cd-action-btn text" onclick="openJustCallDialer('${c.phone}','sms')">&#128172; Text</button>
             ` : ''}
           </div>
         </div>
@@ -1487,6 +1487,21 @@
 
       // Refresh contact detail to show the note in timeline
       selectContact(contactId);
+    }
+
+    // =========================================================================
+    // JUSTCALL DIALER
+    // =========================================================================
+    function openJustCallDialer(phone, mode) {
+      // Open as a small popup window (like AC does) instead of a new tab
+      const cleanPhone = phone.replace(/[^\d+]/g, '');
+      const w = 400, h = 700;
+      const left = window.screenX + window.innerWidth - w - 20;
+      const top = window.screenY + 80;
+      const url = mode === 'sms'
+        ? `https://app.justcall.io/app/macdialer?phone=${cleanPhone}&tab=sms`
+        : `https://app.justcall.io/app/macdialer?phone=${cleanPhone}`;
+      window.open(url, 'justcall_dialer', `width=${w},height=${h},left=${left},top=${top},resizable=yes,scrollbars=yes`);
     }
 
     // =========================================================================

@@ -235,8 +235,8 @@
       <!-- Timeframe -->
       <div class="timeframe-bar">
         <div class="timeframe-pills">
-          <button class="pill" onclick="setTimeframe(7)">7d</button>
-          <button class="pill active" onclick="setTimeframe(30)">30d</button>
+          <button class="pill active" onclick="setTimeframe(7)">7d</button>
+          <button class="pill" onclick="setTimeframe(30)">30d</button>
           <button class="pill" onclick="setTimeframe(90)">90d</button>
           <button class="pill" onclick="setTimeframe(0)">All</button>
         </div>
@@ -394,7 +394,7 @@
     let calendlyEvents = [];
     let dealStages = [];
     let dealPipelines = [];
-    let timeframe = 30; // days, 0 = all
+    let timeframe = 7; // days, 0 = all
     let selectedDay = null;
     let selectedContactId = null;
     let searchQuery = '';
@@ -444,42 +444,48 @@
     // =========================================================================
     // INIT
     // =========================================================================
+    async function fetchData() {
+      const cutoff = timeframe > 0 ? new Date(Date.now() - timeframe * 24 * 60 * 60 * 1000).toISOString() : '1970-01-01';
+
+      // Fetch contacts for timeframe
+      let allContacts = [];
+      let from = 0;
+      while (true) {
+        const { data, error } = await db
+          .from('contacts')
+          .select('*')
+          .gte('created_at', cutoff)
+          .order('created_at', { ascending: false })
+          .range(from, from + 999);
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+        allContacts = allContacts.concat(data);
+        if (data.length < 1000) break;
+        from += 1000;
+      }
+      contacts = allContacts;
+
+      // Fetch timeline events for those contacts only
+      const contactIds = contacts.map(c => c.id);
+      let allTimeline = [];
+      // Batch fetch in chunks of 200 IDs
+      for (let i = 0; i < contactIds.length; i += 200) {
+        const chunk = contactIds.slice(i, i + 200);
+        const { data, error } = await db
+          .from('timeline_events')
+          .select('contact_id,category,event,timestamp,details')
+          .in('contact_id', chunk)
+          .order('timestamp', { ascending: false });
+        if (error) { console.error('Timeline fetch error:', error); break; }
+        if (data) allTimeline = allTimeline.concat(data);
+      }
+      timelineEvents = allTimeline;
+    }
+
     async function init() {
       try {
-        // Fetch contacts
-        let allContacts = [];
-        let from = 0;
-        while (true) {
-          const { data, error, count } = await db
-            .from('contacts')
-            .select('*', { count: 'exact' })
-            .order('created_at', { ascending: false })
-            .range(from, from + 999);
-          if (error) throw error;
-          if (!data || data.length === 0) break;
-          allContacts = allContacts.concat(data);
-          document.getElementById('sync-status').textContent = `Loading ${allContacts.length}...`;
-          if (data.length < 1000) break;
-          from += 1000;
-        }
-        contacts = allContacts;
-
-        // Fetch timeline events for KPI counts
-        let allTimeline = [];
-        from = 0;
-        while (true) {
-          const { data, error } = await db
-            .from('timeline_events')
-            .select('contact_id,category,event,timestamp')
-            .order('timestamp', { ascending: false })
-            .range(from, from + 999);
-          if (error) throw error;
-          if (!data || data.length === 0) break;
-          allTimeline = allTimeline.concat(data);
-          if (data.length < 1000) break;
-          from += 1000;
-        }
-        timelineEvents = allTimeline;
+        document.getElementById('sync-status').textContent = 'Loading...';
+        await fetchData();
 
         // Fetch Calendly events
         let allCalendly = [];
@@ -526,12 +532,15 @@
     // =========================================================================
     // TIMEFRAME
     // =========================================================================
-    function setTimeframe(days) {
+    async function setTimeframe(days) {
       timeframe = days;
       document.querySelectorAll('.timeframe-pills .pill').forEach(p => {
         const d = p.textContent === '7d' ? 7 : p.textContent === '30d' ? 30 : p.textContent === '90d' ? 90 : 0;
         p.classList.toggle('active', d === days);
       });
+      document.getElementById('sync-status').textContent = 'Refreshing...';
+      await fetchData();
+      document.getElementById('sync-status').textContent = `${contacts.length} contacts | ${timelineEvents.length} events | ${calendlyEvents.length} bookings`;
       render();
     }
 

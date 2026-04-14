@@ -3,7 +3,7 @@
  * Incremental Expanded Sync — pulls only contacts updated since last sync,
  * then fetches all their relational data (notes, tags, automations, deals, etc.)
  *
- * Designed for cron: */15 * * * * node ~/c/dashboard/v2/scripts/sync-incremental-full.js
+ * Designed for cron: every 15 min - node ~/c/dashboard/v2/scripts/sync-incremental-full.js
  *
  * Much faster than sync-full.js since it only processes changed contacts.
  */

@@ -175,6 +175,14 @@
     .tl-details { font-size: 11px; color: #8b95b0; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .tl-time { font-size: 10px; color: #5a6178; margin-top: 2px; }
 
+    /* ===== LOADING OVERLAY ===== */
+    .loading-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15,17,23,0.7); z-index: 8000; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
+    .loading-overlay.visible { display: flex; }
+    .loading-spinner { background: #1a1d2e; border: 1px solid #2d3148; border-radius: 10px; padding: 24px 36px; text-align: center; }
+    .loading-spinner .spinner { width: 32px; height: 32px; border: 3px solid #2d3148; border-top-color: #667eea; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 12px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-spinner .msg { font-size: 13px; color: #c4cbdd; }
+
     /* ===== LOGIN ===== */
     .login-screen { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: #0f1117; position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 9999; }
     .login-screen.hidden { display: none !important; }
@@ -238,6 +246,13 @@
         </span>
       </div>
       <button onclick="doLogin()" id="login-btn">Sign In</button>
+    </div>
+  </div>
+
+  <div id="loading-overlay" class="loading-overlay">
+    <div class="loading-spinner">
+      <div class="spinner"></div>
+      <div class="msg" id="loading-msg">Loading data...</div>
     </div>
   </div>
 
@@ -443,6 +458,7 @@
     let userTimezone = 'America/New_York';
     let customStart = null;
     let customEnd = null;
+    const dataCache = {}; // keyed by cutoff ISO string
     let timeframe = 7; // days, 0 = all
     let selectedDay = null;
     let selectedContactId = null;
@@ -477,6 +493,14 @@
     // =========================================================================
     // HELPERS
     // =========================================================================
+    function showLoading(msg) {
+      document.getElementById('loading-msg').textContent = msg || 'Loading data...';
+      document.getElementById('loading-overlay').classList.add('visible');
+    }
+    function hideLoading() {
+      document.getElementById('loading-overlay').classList.remove('visible');
+    }
+
     function getCutoff() {
       if (customStart) return new Date(customStart);
       if (timeframe === 0) return new Date(0);
@@ -499,21 +523,30 @@
     // =========================================================================
     // INIT
     // =========================================================================
-    async function fetchData() {
+    async function fetchData(forceRefresh = false) {
       const cutoff = customStart ? new Date(customStart).toISOString()
         : timeframe > 0 ? new Date(Date.now() - timeframe * 24 * 60 * 60 * 1000).toISOString()
         : '1970-01-01';
+
+      const cacheKey = cutoff + (customEnd || '');
+
+      // Check cache (expires after 5 min)
+      if (!forceRefresh && dataCache[cacheKey] && (Date.now() - dataCache[cacheKey].ts < 5 * 60 * 1000)) {
+        contacts = dataCache[cacheKey].contacts;
+        timelineEvents = dataCache[cacheKey].timeline;
+        console.log(`Cache hit: ${cacheKey} (${contacts.length} contacts)`);
+        return;
+      }
+
+      showLoading(`Loading ${timeframe > 0 ? timeframe + ' days' : customStart ? 'custom range' : 'all'} data...`);
 
       // Fetch contacts for timeframe
       let allContacts = [];
       let from = 0;
       while (true) {
-        const { data, error } = await db
-          .from('contacts')
-          .select('*')
-          .gte('created_at', cutoff)
-          .order('created_at', { ascending: false })
-          .range(from, from + 999);
+        let query = db.from('contacts').select('*').gte('created_at', cutoff).order('created_at', { ascending: false }).range(from, from + 999);
+        if (customEnd) query = query.lte('created_at', customEnd + 'T23:59:59');
+        const { data, error } = await query;
         if (error) throw error;
         if (!data || data.length === 0) break;
         allContacts = allContacts.concat(data);
@@ -537,6 +570,10 @@
         if (data) allTimeline = allTimeline.concat(data);
       }
       timelineEvents = allTimeline;
+
+      // Cache results
+      dataCache[cacheKey] = { contacts, timeline: timelineEvents, ts: Date.now() };
+      hideLoading();
     }
 
     async function init() {
@@ -587,6 +624,7 @@
         render();
       } catch (err) {
         console.error('Init error:', err);
+        hideLoading();
         document.getElementById('loading').textContent = 'Error: ' + err.message;
       }
     }
@@ -1484,7 +1522,7 @@
         } else {
           // Fallback: just re-fetch data from Supabase
           btn.textContent = 'Refreshing data...';
-          await fetchData();
+          await fetchData(true);
           document.getElementById('sync-status').textContent = `${contacts.length} contacts | ${timelineEvents.length} events | ${calendlyEvents.length} bookings`;
           render();
           btn.textContent = 'Resync';
@@ -1493,7 +1531,7 @@
       } catch (e) {
         // Fallback: re-fetch from Supabase
         btn.textContent = 'Refreshing data...';
-        await fetchData();
+        await fetchData(true);
         document.getElementById('sync-status').textContent = `${contacts.length} contacts | ${timelineEvents.length} events | ${calendlyEvents.length} bookings`;
         render();
         btn.textContent = 'Resync';

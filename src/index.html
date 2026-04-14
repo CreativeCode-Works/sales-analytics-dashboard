@@ -1308,11 +1308,17 @@
 
       const statusEl = document.getElementById('note-status');
 
+      // Get logged-in user email
+      const { data: { user } } = await db.auth.getUser();
+      const userEmail = user?.email || 'unknown';
+      const fullNote = noteText + '\n\n— ' + userEmail;
+
       const { error } = await db.from('dashboard_actions').insert({
         contact_id: contactId,
         action_type: 'add_note',
-        payload: { note_text: noteText },
+        payload: { note_text: fullNote },
         status: 'pending',
+        created_by: userEmail,
       });
 
       if (error) {
@@ -1326,8 +1332,8 @@
         timestamp: new Date().toISOString(),
         category: 'NOTE',
         event: 'Note Added (Dashboard)',
-        details: noteText.substring(0, 200),
-        source: 'Dashboard',
+        details: noteText.substring(0, 200) + ' — ' + userEmail,
+        source: 'Dashboard (' + userEmail + ')',
         source_id: `dashboard-note-${Date.now()}`,
       });
 

@@ -29,9 +29,9 @@ on:
       contact_id:
         description: 'Single contact ID (overrides mode)'
         required: false
-  schedule:
-    # Incremental sync every 15 minutes
-    - cron: '*/15 * * * *'
+  # schedule:
+  #   # Smart incremental sync every 15 minutes
+  #   - cron: '*/15 * * * *'
 
 jobs:
   sync:
@@ -118,8 +118,8 @@ jobs:
             echo "run_calendly=true" >> $GITHUB_OUTPUT
             echo "run_justcall=true" >> $GITHUB_OUTPUT
           else
-            echo "ac_script=sync-incremental-full.js" >> $GITHUB_OUTPUT
-            echo "desc=Incremental sync" >> $GITHUB_OUTPUT
+            echo "ac_script=sync-incremental-smart.js" >> $GITHUB_OUTPUT
+            echo "desc=Smart incremental sync" >> $GITHUB_OUTPUT
             echo "run_ac=true" >> $GITHUB_OUTPUT
             echo "run_calendly=false" >> $GITHUB_OUTPUT
             echo "run_justcall=false" >> $GITHUB_OUTPUT

@@ -39,6 +39,7 @@ const LIMIT_CONTACTS = getArg('--limit') ? parseInt(getArg('--limit')) : null;
 const START_OFFSET = getArg('--offset') ? parseInt(getArg('--offset')) : 0;
 const SINGLE_CONTACT = getArg('--contact');
 const DAYS = getArg('--days') ? parseInt(getArg('--days')) : null;
+const SKIP_EXISTING = args.includes('--skip-existing');
 
 // AC custom field mapping (same as existing sync.js)
 const FIELD_MAP = {
@@ -965,6 +966,7 @@ async function run() {
   let totalContacts = 0;
   let totalProcessed = 0;
   let totalNew = 0;
+  let totalSkipped = 0;
   let errors = 0;
   const stats = { notes: 0, tags: 0, automations: 0, deals: 0, emailActivities: 0, sms: 0, calls: 0, timeline: 0 };
   const changeBreakdown = {};
@@ -1007,6 +1009,7 @@ async function run() {
     console.log(`AC total contacts: ${totalContacts}`);
     if (LIMIT_CONTACTS) console.log(`Limiting to ${LIMIT_CONTACTS} contacts`);
     if (START_OFFSET) console.log(`Starting from offset ${START_OFFSET}`);
+    if (SKIP_EXISTING) console.log(`Skipping contacts already in Supabase`);
 
     let pageErrors = 0;
     while (true) {
@@ -1037,6 +1040,16 @@ async function run() {
 
       for (const contact of contacts) {
         if (LIMIT_CONTACTS && totalProcessed >= LIMIT_CONTACTS) break;
+
+        // Skip contacts already in Supabase (for resuming backfills)
+        if (SKIP_EXISTING) {
+          const { count } = await supabase.from('contacts').select('id', { count: 'exact', head: true }).eq('id', String(contact.id));
+          if (count > 0) {
+            totalSkipped++;
+            if (totalSkipped % 100 === 0) console.log(`  Skipped ${totalSkipped} existing contacts...`);
+            continue;
+          }
+        }
 
         try {
           const result = await syncOneContact(contact);
@@ -1087,7 +1100,7 @@ async function run() {
 
   console.log(`\n=== Sync Complete ===`);
   console.log(`Duration: ${elapsed}s`);
-  console.log(`Contacts processed: ${totalProcessed} (${totalNew} new)`);
+  console.log(`Contacts processed: ${totalProcessed} (${totalNew} new, ${totalSkipped} skipped)`);
   console.log(`API calls made: ${requestCount} (~${savings}% savings vs full fetch)`);
   console.log(`Change breakdown: ${JSON.stringify(changeBreakdown)}`);
   console.log(`DB contacts: ${dbContacts}`);

@@ -1041,9 +1041,9 @@ async function run() {
       for (const contact of contacts) {
         if (LIMIT_CONTACTS && totalProcessed >= LIMIT_CONTACTS) break;
 
-        // Skip contacts already in Supabase (for resuming backfills)
+        // Skip contacts that already have expanded data (timeline = fully synced)
         if (SKIP_EXISTING) {
-          const { count } = await supabase.from('contacts').select('id', { count: 'exact', head: true }).eq('id', String(contact.id));
+          const { count } = await supabase.from('timeline_events').select('contact_id', { count: 'exact', head: true }).eq('contact_id', String(contact.id));
           if (count > 0) {
             totalSkipped++;
             if (totalSkipped % 100 === 0) console.log(`  Skipped ${totalSkipped} existing contacts...`);

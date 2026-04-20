@@ -126,9 +126,9 @@ jobs:
             echo "run_justcall=true" >> $GITHUB_OUTPUT
           else
             echo "ac_script=sync-incremental-smart.js" >> $GITHUB_OUTPUT
-            echo "desc=Smart incremental sync" >> $GITHUB_OUTPUT
+            echo "desc=Smart incremental sync + Calendly" >> $GITHUB_OUTPUT
             echo "run_ac=true" >> $GITHUB_OUTPUT
-            echo "run_calendly=false" >> $GITHUB_OUTPUT
+            echo "run_calendly=true" >> $GITHUB_OUTPUT
             echo "run_justcall=false" >> $GITHUB_OUTPUT
           fi
 

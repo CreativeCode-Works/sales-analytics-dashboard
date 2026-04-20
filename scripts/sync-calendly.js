@@ -63,7 +63,8 @@ async function run() {
 
   // Fetch scheduled events
   const minTime = new Date(Date.now() - DAYS * 24 * 60 * 60 * 1000).toISOString();
-  const maxTime = new Date().toISOString();
+  // Include future events (up to 30 days ahead) so the weekly calls view works
+  const maxTime = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
   let allEvents = [];
   let nextUrl = `https://api.calendly.com/scheduled_events?organization=${orgUri}&min_start_time=${minTime}&max_start_time=${maxTime}&count=100&sort=start_time:asc`;

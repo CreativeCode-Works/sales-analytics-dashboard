@@ -18,6 +18,7 @@ on:
           - writeback     # Push dashboard changes to AC
           - incremental   # Only contacts updated since last sync
           - full          # All contacts (slow, hours)
+          - migrate       # Run pending database migrations only
       days:
         description: 'Number of days'
         required: false
@@ -106,6 +107,12 @@ jobs:
             echo "run_ac=false" >> $GITHUB_OUTPUT
             echo "run_calendly=false" >> $GITHUB_OUTPUT
             echo "run_justcall=true" >> $GITHUB_OUTPUT
+          elif [ "$MODE" = "migrate" ]; then
+            echo "ac_script=run-migration.js migrations/005_add_new_contact_fields.sql" >> $GITHUB_OUTPUT
+            echo "desc=Run database migrations" >> $GITHUB_OUTPUT
+            echo "run_ac=true" >> $GITHUB_OUTPUT
+            echo "run_calendly=false" >> $GITHUB_OUTPUT
+            echo "run_justcall=false" >> $GITHUB_OUTPUT
           elif [ "$MODE" = "full" ]; then
             if [ -n "$LIMIT" ] && [ "$LIMIT" != "5" ]; then
               echo "ac_script=sync-full.js --limit $LIMIT" >> $GITHUB_OUTPUT

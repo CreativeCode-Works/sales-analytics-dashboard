@@ -750,10 +750,14 @@ async function run() {
   const updatedAfter = lastSync.toISOString().replace('T', ' ').split('.')[0];
   console.log(`Fetching contacts updated after: ${updatedAfter}`);
 
-  const { data: syncRun } = await supabase
+  const { data: syncRun, error: syncRunError } = await supabase
     .from('sync_log')
     .insert({ sync_type: 'incremental-smart', status: 'running' })
     .select().single();
+
+  if (syncRunError) {
+    console.warn('Warning: Failed to create sync_log entry:', syncRunError.message);
+  }
 
   let offset = 0;
   let totalProcessed = 0;
@@ -805,14 +809,16 @@ async function run() {
   const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
   const { count: dbContacts } = await supabase.from('contacts').select('*', { count: 'exact', head: true });
 
-  await supabase.from('sync_log').update({
-    completed_at: new Date().toISOString(),
-    contacts_processed: totalProcessed,
-    contacts_updated: totalProcessed,
-    errors,
-    db_total: dbContacts,
-    status: errors > 0 ? 'partial' : 'success',
-  }).eq('id', syncRun.id);
+  if (syncRun) {
+    await supabase.from('sync_log').update({
+      completed_at: new Date().toISOString(),
+      contacts_processed: totalProcessed,
+      contacts_updated: totalProcessed,
+      errors,
+      db_total: dbContacts,
+      status: errors > 0 ? 'partial' : 'success',
+    }).eq('id', syncRun.id);
+  }
 
   console.log(`\nSmart incremental sync complete:`);
   console.log(`  Duration: ${elapsed}s`);
